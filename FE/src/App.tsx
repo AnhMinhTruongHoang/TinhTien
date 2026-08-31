@@ -1,43 +1,29 @@
-import { useState } from "react";
-import { TextField, Button, Typography, Container } from "@mui/material";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Container, Box, useMediaQuery, useTheme } from "@mui/material";
+import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import Batches from "./pages/Batches";
+import Owners from "./pages/Owners";
+import AnimalTypes from "./pages/AnimalTypes";
 
 function App() {
-  const [a, setA] = useState<number>(0);
-  const [b, setB] = useState<number>(0);
-  const [sum, setSum] = useState<number>(0);
-
-  const handleCalc = () => {
-    setSum(a + b);
-  };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   return (
-    <Container maxWidth="sm" style={{ marginTop: "50px" }}>
-      <Typography variant="h4" gutterBottom>
-        App Tính Toán
-      </Typography>
-      <TextField
-        label="Số A"
-        type="number"
-        value={a}
-        onChange={(e) => setA(Number(e.target.value))}
-        fullWidth
-        margin="normal"
-      />
-      <TextField
-        label="Số B"
-        type="number"
-        value={b}
-        onChange={(e) => setB(Number(e.target.value))}
-        fullWidth
-        margin="normal"
-      />
-      <Button variant="contained" color="primary" onClick={handleCalc}>
-        Tính Tổng
-      </Button>
-      <Typography variant="h6" style={{ marginTop: "20px" }}>
-        Kết quả: {sum}
-      </Typography>
-    </Container>
+    <Router>
+      <Navbar />
+      <Container maxWidth="lg">
+        <Box sx={{ py: isMobile ? 2 : 4, px: isMobile ? 1 : 2 }}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/batches" element={<Batches />} />
+            <Route path="/owners" element={<Owners />} />
+            <Route path="/animal-types" element={<AnimalTypes />} />
+          </Routes>
+        </Box>
+      </Container>
+    </Router>
   );
 }
 
