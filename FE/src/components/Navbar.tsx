@@ -10,7 +10,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
-import AgricultureIcon from "@mui/icons-material/Agriculture";
+import SavingsIcon from "@mui/icons-material/Savings";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import { useState } from "react";
@@ -23,7 +23,7 @@ const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const menuItems = [
-    { label: "Dashboard", path: "/" },
+    { label: "Bảng diều Khiển", path: "/" },
     { label: "Lô Động Vật", path: "/batches" },
     { label: "Chủ Động Vật", path: "/owners" },
     { label: "Loại Động Vật", path: "/animal-types" },
@@ -40,13 +40,13 @@ const Navbar = () => {
     <>
       <AppBar position="sticky" sx={{ mb: 2 }}>
         <Toolbar>
-          <AgricultureIcon sx={{ mr: 2 }} />
+          <SavingsIcon sx={{ mr: 2 }} />
           <Typography
             variant="h6"
             sx={{ flexGrow: 1, cursor: "pointer", fontWeight: "bold" }}
             onClick={() => handleNavigation("/")}
           >
-            TinhTien
+            Tính Tiền
           </Typography>
 
           {/* Desktop Menu */}

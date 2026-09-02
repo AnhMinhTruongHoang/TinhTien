@@ -69,6 +69,24 @@ declare namespace Batches {
     notes?: string;
   }
 
+  interface HistoryItem {
+    _id: string;
+    batch: string | Batches.Batch;
+    pricePerUnit: number;
+    slaughterPricePerUnit: number;
+    transportCost: number;
+    quantity: number;
+    quantityNotSlaughtered: number;
+    slaughterQuantity: number;
+    animalCost: number;
+    slaughterCost: number;
+    totalCost: number;
+    costPerUnit: number;
+    calculatedAt: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+
   interface UpdateBatchDto {
     owner?: string;
     animalType?: string;

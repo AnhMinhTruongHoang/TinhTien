@@ -1,19 +1,19 @@
 import {
   Controller,
-  Post,
   Get,
-  Body,
+  Post,
   Param,
+  Body,
   Put,
   Delete,
 } from '@nestjs/common';
 import { CreateAnimalTypeDto } from './dto/create-animal-type.dto';
 import { UpdateAnimalTypeDto } from './dto/update-animal-type.dto';
-import { AnimalTypesService } from './animal-types.service';
+import { AnimalTypeService } from './animal-types.service';
 
 @Controller('animal-types')
 export class AnimalTypesController {
-  constructor(private readonly service: AnimalTypesService) {}
+  constructor(private readonly service: AnimalTypeService) {}
 
   @Post()
   create(@Body() dto: CreateAnimalTypeDto) {

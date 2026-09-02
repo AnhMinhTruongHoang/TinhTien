@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AnimalTypesService } from './animal-types.service';
-import { AnimalTypesController } from './animal-types.controller';
 import { AnimalType, AnimalTypeSchema } from './schemas/animal-type.schemas';
+import { AnimalTypesController } from './animal-types.controller';
+import { AnimalTypeService } from './animal-types.service';
 
 @Module({
   imports: [
@@ -11,7 +11,13 @@ import { AnimalType, AnimalTypeSchema } from './schemas/animal-type.schemas';
     ]),
   ],
   controllers: [AnimalTypesController],
-  providers: [AnimalTypesService],
-  exports: [AnimalTypesService],
+  providers: [AnimalTypeService],
+  exports: [AnimalTypeService],
 })
-export class AnimalTypesModule {}
+export class AnimalTypeModule implements OnModuleInit {
+  constructor(private animalTypeService: AnimalTypeService) {}
+
+  async onModuleInit() {
+    await this.animalTypeService.seedDefaultAnimalTypes();
+  }
+}

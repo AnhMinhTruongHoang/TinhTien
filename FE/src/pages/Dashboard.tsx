@@ -1,13 +1,91 @@
-import { Box, Typography, Paper, Card, CardContent } from "@mui/material";
+import { Box, Typography, Card, CardContent, Paper } from "@mui/material";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import PetsIcon from "@mui/icons-material/Pets";
 import GroupIcon from "@mui/icons-material/Group";
+import CategoryIcon from "@mui/icons-material/Category";
+import { useState, useEffect } from "react";
+import { api } from "@/utils/api";
 
 const Dashboard = () => {
+  const [stats, setStats] = useState({
+    totalBatches: 0,
+    totalOwners: 0,
+    totalAnimalTypes: 0,
+    avgCost: 0,
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const [batches, owners, animalTypes] = await Promise.all([
+        api.batches.getAll(),
+        api.owners.getAll(),
+        api.animalTypes.getAll(),
+      ]);
+
+      // Nếu backend có endpoint tổng hợp chi phí
+      let avgCost = 0;
+      if (batches.length > 0) {
+        // gọi API tính chi phí cho từng batch
+        const costResults = await Promise.all(
+          batches.map((b) =>
+            api.batches.calculateCost({
+              batchId: b._id,
+              pricePerUnit: 100000, // ví dụ: giá mỗi con, bạn có thể lấy từ input
+              slaughterPricePerUnit: 50000,
+              transportCost: 200000,
+            })
+          )
+        );
+
+        const totalCost = costResults.reduce((sum, r) => sum + r.totalCost, 0);
+        avgCost = Math.round(totalCost / costResults.length);
+      }
+
+      setStats({
+        totalBatches: batches.length,
+        totalOwners: owners.length,
+        totalAnimalTypes: animalTypes.length,
+        avgCost,
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  const statCards = [
+    {
+      title: "Tổng Lô",
+      value: stats.totalBatches,
+      icon: <PetsIcon sx={{ fontSize: 48, color: "#1976d2" }} />,
+    },
+    {
+      title: "Chủ Động Vật",
+      value: stats.totalOwners,
+      icon: <GroupIcon sx={{ fontSize: 48, color: "#388e3c" }} />,
+    },
+    {
+      title: "Loại Động Vật",
+      value: stats.totalAnimalTypes,
+      icon: <CategoryIcon sx={{ fontSize: 48, color: "#9c27b0" }} />,
+    },
+    {
+      title: "Chi Phí Trung Bình",
+      value: `${stats.avgCost}đ`,
+      icon: <TrendingUpIcon sx={{ fontSize: 48, color: "#f57c00" }} />,
+    },
+  ];
+
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: "bold" }}>
-        Dashboard - Quản Lý Tính Giá Động Vật
+      <Typography
+        variant="h4"
+        sx={{ mb: 4, fontWeight: "bold", textAlign: "center" }}
+      >
+        Quản Lý Tính Giá Động Vật
       </Typography>
 
       <Box
@@ -22,55 +100,39 @@ const Dashboard = () => {
           mb: 4,
         }}
       >
-        {/* Card Stats */}
-        <Card>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <PetsIcon sx={{ fontSize: 40, color: "#1976d2" }} />
-              <Box>
-                <Typography color="textSecondary" gutterBottom>
-                  Tổng Lô
-                </Typography>
-                <Typography variant="h5">0</Typography>
+        {statCards.map((card, index) => (
+          <Card
+            key={index}
+            sx={{
+              textAlign: "center",
+              boxShadow: 3,
+              transition: "0.3s",
+              "&:hover": { transform: "scale(1.05)", boxShadow: 6 },
+            }}
+          >
+            <CardContent>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                {card.icon}
+                <Typography color="textSecondary">{card.title}</Typography>
+                <Typography variant="h5">{card.value}</Typography>
               </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <GroupIcon sx={{ fontSize: 40, color: "#388e3c" }} />
-              <Box>
-                <Typography color="textSecondary" gutterBottom>
-                  Chủ Động Vật
-                </Typography>
-                <Typography variant="h5">0</Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <TrendingUpIcon sx={{ fontSize: 40, color: "#f57c00" }} />
-              <Box>
-                <Typography color="textSecondary" gutterBottom>
-                  Chi Phí Trung Bình
-                </Typography>
-                <Typography variant="h5">0đ</Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </Box>
 
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
+      <Paper sx={{ p: 3, boxShadow: 2 }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
           Hướng Dẫn Sử Dụng
         </Typography>
-        <Box component="ul" sx={{ pl: 2 }}>
+        <Box component="ul" sx={{ pl: 3, color: "text.secondary" }}>
           <li>Đi tới "Chủ Động Vật" để thêm/quản lý chủ động vật</li>
           <li>
             Đi tới "Loại Động Vật" để thêm/quản lý loại động vật (lợn, gà, v.v.)

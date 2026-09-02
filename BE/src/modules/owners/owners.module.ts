@@ -1,15 +1,21 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { OwnersService } from './owners.service';
-import { OwnersController } from './owners.controller';
 import { Owner, OwnerSchema } from './schemas/owner.schemas';
+import { OwnersController } from './owners.controller';
+import { OwnerService } from './owners.service';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Owner.name, schema: OwnerSchema }]),
   ],
   controllers: [OwnersController],
-  providers: [OwnersService],
-  exports: [OwnersService],
+  providers: [OwnerService],
+  exports: [OwnerService],
 })
-export class OwnersModule {}
+export class OwnerModule implements OnModuleInit {
+  constructor(private ownerService: OwnerService) {}
+
+  async onModuleInit() {
+    await this.ownerService.seedDefaultOwners();
+  }
+}

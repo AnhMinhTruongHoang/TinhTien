@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Button,
@@ -20,7 +20,15 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { Edit, Delete, Add, Calculate } from "@mui/icons-material";
+import {
+  Edit,
+  Delete,
+  Add,
+  Calculate,
+  FilterAlt,
+  RestartAlt,
+  History,
+} from "@mui/icons-material";
 import { api } from "@/utils/api";
 
 const Batches = () => {
@@ -35,6 +43,18 @@ const Batches = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [costResult, setCostResult] = useState<Batches.CostResult | null>(null);
+
+  // ================= FILTER =================
+  const [searchText, setSearchText] = useState("");
+  const [filterOwner, setFilterOwner] = useState("");
+  const [filterAnimalType, setFilterAnimalType] = useState("");
+
+  // ================= CALCULATION HISTORY =================
+  const [costHistoryOpen, setCostHistoryOpen] = useState(false);
+  const [costHistory, setCostHistory] = useState<Batches.HistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  ////
   const [formData, setFormData] = useState<Batches.CreateBatchDto>({
     ownerId: "",
     animalTypeId: "",
@@ -78,6 +98,64 @@ const Batches = () => {
     }
   };
 
+  const fetchCostHistory = async (batchId?: string) => {
+    try {
+      setLoadingHistory(true);
+      const data = batchId
+        ? await api.calculationHistory.getByBatch(batchId)
+        : await api.calculationHistory.getAll();
+      setCostHistory(data);
+    } catch (error) {
+      console.error("Error fetching cost history:", error);
+      alert("Không thể tải lịch sử tính chi phí");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // ================= FILTER DATA =================
+  const filteredBatches = useMemo(() => {
+    return batches.filter((batch) => {
+      const ownerName =
+        typeof batch.owner === "string" ? batch.owner : batch.owner?.name || "";
+
+      const animalTypeName =
+        typeof batch.animalType === "string"
+          ? batch.animalType
+          : batch.animalType?.name || "";
+
+      const keyword = searchText.toLowerCase().trim();
+
+      const matchSearch =
+        !keyword ||
+        ownerName.toLowerCase().includes(keyword) ||
+        animalTypeName.toLowerCase().includes(keyword) ||
+        batch.originAddress?.toLowerCase().includes(keyword) ||
+        batch.destinationAddress?.toLowerCase().includes(keyword);
+
+      const ownerId =
+        typeof batch.owner === "string" ? batch.owner : batch.owner?._id;
+
+      const animalTypeId =
+        typeof batch.animalType === "string"
+          ? batch.animalType
+          : batch.animalType?._id;
+
+      const matchOwner = !filterOwner || ownerId === filterOwner;
+
+      const matchAnimalType =
+        !filterAnimalType || animalTypeId === filterAnimalType;
+
+      return matchSearch && matchOwner && matchAnimalType;
+    });
+  }, [batches, searchText, filterOwner, filterAnimalType]);
+
+  const handleResetFilter = () => {
+    setSearchText("");
+    setFilterOwner("");
+    setFilterAnimalType("");
+  };
+
   const handleOpen = (batch?: Batches.Batch) => {
     if (batch) {
       setFormData({
@@ -106,15 +184,46 @@ const Batches = () => {
 
   const handleSave = async () => {
     try {
+      if (!formData.ownerId) {
+        alert("Vui lòng chọn chủ động vật");
+        return;
+      }
+
+      if (!formData.animalTypeId) {
+        alert("Vui lòng chọn loại động vật");
+        return;
+      }
+
+      if (!formData.quantity || formData.quantity <= 0) {
+        alert("Số lượng phải lớn hơn 0");
+        return;
+      }
+
+      const quantityNotSlaughtered = formData.quantityNotSlaughtered ?? 0;
+
+      if (quantityNotSlaughtered < 0) {
+        alert("Số lượng không giết mổ không được âm");
+        return;
+      }
+
+      if (quantityNotSlaughtered > formData.quantity) {
+        alert("Số lượng không giết mổ không được lớn hơn tổng số lượng");
+        return;
+      }
+
       if (editingId) {
         await api.batches.update(editingId, formData);
       } else {
         await api.batches.create(formData);
       }
-      fetchBatches();
+
+      await fetchBatches();
+
       handleClose();
     } catch (error) {
       console.error("Error saving batch:", error);
+
+      alert("Không thể lưu lô động vật");
     }
   };
 
@@ -131,16 +240,51 @@ const Batches = () => {
 
   const handleCalculateCost = async () => {
     if (!selectedBatchId) return;
+
+    if (costData.pricePerUnit <= 0) {
+      alert("Giá mỗi đầu phải lớn hơn 0");
+      return;
+    }
+
+    if ((costData.slaughterPricePerUnit ?? 0) < 0) {
+      alert("Giá giết mổ không được âm");
+      return;
+    }
+
+    if ((costData.transportCost ?? 0) < 0) {
+      alert("Chi phí vận chuyển không được âm");
+      return;
+    }
+
     try {
-      const result = await api.batches.calculateCost({
+      // Gọi API mới → vừa tính vừa lưu lịch sử
+      const result = await api.calculationHistory.create({
         batchId: selectedBatchId,
         pricePerUnit: costData.pricePerUnit,
         slaughterPricePerUnit: costData.slaughterPricePerUnit,
         transportCost: costData.transportCost,
       });
-      setCostResult(result);
+
+      // Hiển thị kết quả ngay
+      setCostResult({
+        batchId: result.batch,
+        quantity: result.quantity,
+        quantityNotSlaughtered: result.quantityNotSlaughtered,
+        slaughterQuantity: result.slaughterQuantity,
+        animalCost: result.animalCost,
+        slaughterCost: result.slaughterCost,
+        transportCost: result.transportCost,
+        totalCost: result.totalCost,
+        costPerUnit: result.costPerUnit,
+      });
+
+      // Cập nhật lại danh sách lịch sử (nếu đang mở)
+      if (costHistoryOpen) {
+        await fetchCostHistory();
+      }
     } catch (error) {
       console.error("Error calculating cost:", error);
+      alert("Không thể tính chi phí");
     }
   };
 
@@ -168,10 +312,120 @@ const Batches = () => {
         </Button>
       </Box>
 
+      {/* ================= FILTER ================= */}
+      <Paper
+        sx={{
+          p: 2,
+          mb: 3,
+          borderRadius: 2,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mb: 2,
+          }}
+        >
+          <FilterAlt color="primary" />
+
+          <Typography variant="h6">Bộ Lọc</Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr auto",
+            gap: 2,
+            alignItems: "center",
+          }}
+        >
+          <TextField
+            fullWidth
+            size="small"
+            label="Tìm kiếm"
+            placeholder="Tên chủ, loại động vật, địa chỉ..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+
+          <Select
+            fullWidth
+            size="small"
+            displayEmpty
+            value={filterOwner}
+            onChange={(e) => setFilterOwner(e.target.value)}
+          >
+            <MenuItem value="">Tất cả chủ</MenuItem>
+
+            {owners.map((owner) => (
+              <MenuItem key={owner._id} value={owner._id}>
+                {owner.name}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <Select
+            fullWidth
+            size="small"
+            displayEmpty
+            value={filterAnimalType}
+            onChange={(e) => setFilterAnimalType(e.target.value)}
+          >
+            <MenuItem value="">Tất cả loại</MenuItem>
+
+            {animalTypes.map((type) => (
+              <MenuItem key={type._id} value={type._id}>
+                {type.name}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <Button
+            variant="outlined"
+            startIcon={<RestartAlt />}
+            onClick={handleResetFilter}
+            fullWidth={isMobile}
+          >
+            Xóa lọc
+          </Button>
+        </Box>
+
+        <Typography
+          variant="body2"
+          sx={{
+            mt: 2,
+            color: "text.secondary",
+          }}
+        >
+          Đang hiển thị {filteredBatches.length} / {batches.length} lô
+        </Typography>
+      </Paper>
+
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          mb: 3,
+        }}
+      >
+        <Button
+          variant="outlined"
+          startIcon={<History />}
+          onClick={async () => {
+            setCostHistoryOpen(true);
+            await fetchCostHistory();
+          }}
+        >
+          Xem lịch sử tính chi phí
+        </Button>
+      </Box>
+
       {isMobile ? (
         // Mobile: Card View
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {batches.map((batch) => (
+          {filteredBatches.map((batch) => (
             <Card key={batch._id}>
               <CardContent>
                 <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold" }}>
@@ -197,9 +451,17 @@ const Batches = () => {
                     size="small"
                     onClick={() => {
                       setSelectedBatchId(batch._id);
+
+                      setCostData({
+                        batchId: batch._id,
+                        pricePerUnit: 0,
+                        slaughterPricePerUnit: 0,
+                        transportCost: 0,
+                      });
+
+                      setCostResult(null);
                       setCostOpen(true);
                     }}
-                    sx={{ flex: 1 }}
                   >
                     <Calculate fontSize="small" />
                   </IconButton>
@@ -249,7 +511,7 @@ const Batches = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {batches.map((batch) => (
+              {filteredBatches.map((batch) => (
                 <TableRow key={batch._id}>
                   <TableCell>
                     {typeof batch.owner === "string"
@@ -271,6 +533,15 @@ const Batches = () => {
                       size="small"
                       onClick={() => {
                         setSelectedBatchId(batch._id);
+
+                        setCostData({
+                          batchId: batch._id,
+                          pricePerUnit: 0,
+                          slaughterPricePerUnit: 0,
+                          transportCost: 0,
+                        });
+
+                        setCostResult(null);
                         setCostOpen(true);
                       }}
                     >
@@ -296,7 +567,7 @@ const Batches = () => {
       {/* Dialog thêm/sửa lô */}
       <Dialog open={open} onClose={handleClose} fullScreen={isMobile}>
         <Box sx={{ p: 3, minWidth: isMobile ? "auto" : 450 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
             {editingId ? "Sửa Lô" : "Thêm Lô Mới"}
           </Typography>
           <Select
@@ -333,9 +604,20 @@ const Batches = () => {
             fullWidth
             label="Số Lượng"
             type="number"
+            slotProps={{
+              htmlInput: {
+                min: 1,
+              },
+            }}
             value={formData.quantity}
             onChange={(e) =>
-              setFormData({ ...formData, quantity: parseInt(e.target.value) })
+              setFormData({
+                ...formData,
+                quantity:
+                  e.target.value === ""
+                    ? 0
+                    : Math.max(0, parseInt(e.target.value)),
+              })
             }
             sx={{ mb: 2 }}
           />
@@ -343,11 +625,19 @@ const Batches = () => {
             fullWidth
             label="Số Lượng Không Giết Mổ"
             type="number"
+            slotProps={{
+              htmlInput: {
+                min: 1,
+              },
+            }}
             value={formData.quantityNotSlaughtered || 0}
             onChange={(e) =>
               setFormData({
                 ...formData,
-                quantityNotSlaughtered: parseInt(e.target.value),
+                quantityNotSlaughtered:
+                  e.target.value === ""
+                    ? 0
+                    : Math.max(0, parseInt(e.target.value)),
               })
             }
             sx={{ mb: 2 }}
@@ -410,7 +700,7 @@ const Batches = () => {
         fullScreen={isMobile}
       >
         <Box sx={{ p: 3, minWidth: isMobile ? "auto" : 450 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
             Tính Chi Phí
           </Typography>
           <TextField
@@ -517,6 +807,172 @@ const Batches = () => {
               Đóng
             </Button>
           </Box>
+        </Box>
+      </Dialog>
+
+      {/* ================= LỊCH SỬ TÍNH CHI PHÍ ================= */}
+      <Dialog
+        open={costHistoryOpen}
+        onClose={() => setCostHistoryOpen(false)}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="md"
+      >
+        <Box sx={{ p: 3 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
+            <Typography variant="h6">Lịch Sử Tính Chi Phí</Typography>
+            <Button onClick={() => setCostHistoryOpen(false)}>Đóng</Button>
+          </Box>
+
+          {loadingHistory ? (
+            <Typography sx={{ textAlign: "center" }}>Đang tải...</Typography>
+          ) : costHistory.length === 0 ? (
+            <Paper sx={{ p: 4, textAlign: "center" }}>
+              <Typography color="text.secondary">
+                Chưa có lịch sử tính chi phí.
+              </Typography>
+            </Paper>
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                maxHeight: "70vh",
+                overflowY: "auto",
+              }}
+            >
+              {costHistory.map((item, index) => (
+                <Card key={item._id}>
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: "bold" }}
+                      >
+                        Lần tính #{costHistory.length - index}
+                      </Typography>
+
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(item.calculatedAt).toLocaleString("vi-VN")}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={async () => {
+                            if (confirm("Bạn có chắc muốn xóa lần tính này?")) {
+                              try {
+                                await api.calculationHistory.delete(item._id);
+                                await fetchCostHistory();
+                              } catch (error) {
+                                alert("Xóa thất bại");
+                              }
+                            }
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+                        gap: 1,
+                      }}
+                    >
+                      {/* ===== THÊM 2 DÒNG NÀY ===== */}
+                      <Typography>
+                        <strong>Chủ động vật:</strong>{" "}
+                        {typeof item.batch === "object" && item.batch?.owner
+                          ? typeof item.batch.owner === "string"
+                            ? item.batch.owner
+                            : item.batch.owner.name
+                          : "—"}
+                      </Typography>
+
+                      <Typography>
+                        <strong>Loại động vật:</strong>{" "}
+                        {typeof item.batch === "object" &&
+                        item.batch?.animalType
+                          ? typeof item.batch.animalType === "string"
+                            ? item.batch.animalType
+                            : item.batch.animalType.name
+                          : "—"}
+                      </Typography>
+                      {/* ============================ */}
+
+                      <Typography>
+                        <strong>Batch ID:</strong>{" "}
+                        {typeof item.batch === "string"
+                          ? item.batch
+                          : item.batch?._id}
+                      </Typography>
+
+                      <Typography>
+                        <strong>Số lượng:</strong> {item.quantity}
+                      </Typography>
+
+                      <Typography>
+                        <strong>Giết mổ:</strong> {item.slaughterQuantity}
+                      </Typography>
+
+                      <Typography>
+                        <strong>Không giết mổ:</strong>{" "}
+                        {item.quantityNotSlaughtered}
+                      </Typography>
+
+                      <Typography>
+                        <strong>Chi phí mua:</strong>{" "}
+                        {item.animalCost?.toLocaleString("vi-VN")}đ
+                      </Typography>
+
+                      <Typography>
+                        <strong>Chi phí giết mổ:</strong>{" "}
+                        {item.slaughterCost?.toLocaleString("vi-VN")}đ
+                      </Typography>
+
+                      <Typography>
+                        <strong>Chi phí vận chuyển:</strong>{" "}
+                        {item.transportCost?.toLocaleString("vi-VN")}đ
+                      </Typography>
+
+                      <Typography
+                        sx={{ color: "primary.main", fontWeight: "bold" }}
+                      >
+                        Tổng chi phí: {item.totalCost?.toLocaleString("vi-VN")}đ
+                      </Typography>
+
+                      <Typography
+                        sx={{ color: "success.main", fontWeight: "bold" }}
+                      >
+                        Trung bình / đầu:{" "}
+                        {item.costPerUnit?.toLocaleString("vi-VN")}đ
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          )}
         </Box>
       </Dialog>
     </Box>

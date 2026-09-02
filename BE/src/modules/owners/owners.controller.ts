@@ -9,11 +9,11 @@ import {
 } from '@nestjs/common';
 import { CreateOwnerDto } from './dto/create-owner.dto';
 import { UpdateOwnerDto } from './dto/update-owner.dto';
-import { OwnersService } from './owners.service';
+import { OwnerService } from './owners.service';
 
 @Controller('owners')
 export class OwnersController {
-  constructor(private readonly service: OwnersService) {}
+  constructor(private readonly service: OwnerService) {}
 
   @Post()
   create(@Body() dto: CreateOwnerDto) {

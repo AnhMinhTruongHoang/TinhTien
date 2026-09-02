@@ -17,6 +17,7 @@ import {
   CardContent,
   useMediaQuery,
   useTheme,
+  CardActions,
 } from "@mui/material";
 import { Edit, Delete, Add } from "@mui/icons-material";
 import { api } from "@/utils/api";
@@ -28,10 +29,32 @@ const Owners = () => {
   const [owners, setOwners] = useState<Owners.Owner[]>([]);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [formData, setFormData] = useState<Owners.CreateOwnerDto>({
     name: "",
     contact: "",
     address: "",
+  });
+
+  // Hàm chuẩn hóa: bỏ dấu tiếng Việt + lowercase
+  const normalizeString = (str: string) =>
+    str
+      .normalize("NFD") // tách ký tự và dấu
+      .replace(/[\u0300-\u036f]/g, "") // xóa dấu
+      .toLowerCase();
+
+  const filteredOwners = owners.filter((o) => {
+    const name = normalizeString(o.name || "");
+    const contact = normalizeString(o.contact || "");
+    const address = normalizeString(o.address || "");
+    const search = normalizeString(searchTerm);
+
+    return (
+      name.includes(search) ||
+      contact.includes(search) ||
+      address.includes(search)
+    );
   });
 
   useEffect(() => {
@@ -61,6 +84,14 @@ const Owners = () => {
   const handleClose = () => {
     setOpen(false);
     setEditingId(null);
+  };
+
+  const handleCall = (phone?: string) => {
+    if (!phone) return;
+
+    if (confirm(`Bạn có muốn gọi đến số ${phone} không?`)) {
+      window.location.href = `tel:${phone}`;
+    }
   };
 
   const handleSave = async () => {
@@ -112,38 +143,86 @@ const Owners = () => {
         </Button>
       </Box>
 
+      {/* Ô tìm kiếm */}
+      <TextField
+        fullWidth={isMobile}
+        placeholder="Tìm kiếm theo tên, liên hệ hoặc địa chỉ..."
+        variant="outlined"
+        size="small"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        sx={{
+          mb: 3,
+          "& .MuiOutlinedInput-root": {
+            bgcolor: theme.palette.mode === "dark" ? "#1e1e1e" : "white",
+            "& fieldset": {
+              borderColor: theme.palette.mode === "dark" ? "#555" : "#ccc",
+            },
+            "&:hover fieldset": {
+              borderColor: theme.palette.mode === "dark" ? "#888" : "#1976d2",
+            },
+            "&.Mui-focused fieldset": {
+              borderColor: "#1976d2",
+            },
+          },
+          "& .MuiInputBase-input::placeholder": {
+            color: theme.palette.mode === "dark" ? "#aaa" : "#666",
+            opacity: 1,
+          },
+        }}
+      />
+
       {isMobile ? (
         // Mobile: Card View
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {owners.map((owner) => (
-            <Card key={owner._id}>
+          {filteredOwners.map((owner) => (
+            <Card key={owner._id} sx={{ boxShadow: 3, borderRadius: 2 }}>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold" }}>
+                <Typography
+                  variant="h6"
+                  sx={{ mb: 1, fontWeight: "bold", textAlign: "center" }}
+                >
                   {owner.name}
                 </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Liên Hệ:</strong> {owner.contact || "-"}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  <strong>Địa Chỉ:</strong> {owner.address || "-"}
-                </Typography>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleOpen(owner)}
-                    sx={{ flex: 1 }}
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  sx={{ mb: 1 }}
+                >
+                  Liên Hệ:{" "}
+                  <span
+                    style={{
+                      color: "#1976d2",
+                      cursor: owner.contact ? "pointer" : "default",
+                      textDecoration: owner.contact ? "underline" : "none",
+                    }}
+                    onClick={() => handleCall(owner.contact)}
                   >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(owner._id)}
-                    sx={{ flex: 1 }}
-                  >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Box>
+                    {owner.contact || "-"}
+                  </span>
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  sx={{ mb: 2 }}
+                >
+                  Địa Chỉ:{" "}
+                  <span style={{ color: "#388e3c" }}>
+                    {owner.address || "-"}
+                  </span>
+                </Typography>
               </CardContent>
+              <CardActions sx={{ justifyContent: "center", gap: 2 }}>
+                <IconButton color="primary" onClick={() => handleOpen(owner)}>
+                  <Edit />
+                </IconButton>
+                <IconButton
+                  color="error"
+                  onClick={() => handleDelete(owner._id)}
+                >
+                  <Delete />
+                </IconButton>
+              </CardActions>
             </Card>
           ))}
         </Box>
@@ -168,10 +247,25 @@ const Owners = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {owners.map((owner) => (
+              {filteredOwners.map((owner) => (
                 <TableRow key={owner._id}>
                   <TableCell>{owner.name}</TableCell>
-                  <TableCell>{owner.contact || "-"}</TableCell>
+                  <TableCell>
+                    {owner.contact ? (
+                      <span
+                        style={{
+                          color: "#1976d2",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                        }}
+                        onClick={() => handleCall(owner.contact)}
+                      >
+                        {owner.contact}
+                      </span>
+                    ) : (
+                      "-"
+                    )}
+                  </TableCell>
                   <TableCell>{owner.address || "-"}</TableCell>
                   <TableCell align="center">
                     <IconButton size="small" onClick={() => handleOpen(owner)}>
@@ -193,9 +287,13 @@ const Owners = () => {
 
       <Dialog open={open} onClose={handleClose} fullScreen={isMobile}>
         <Box sx={{ p: 3, minWidth: isMobile ? "auto" : 400 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2, textAlign: "center", fontWeight: "bold" }}
+          >
             {editingId ? "Sửa Chủ" : "Thêm Chủ Mới"}
           </Typography>
+
           <TextField
             fullWidth
             label="Tên Chủ"

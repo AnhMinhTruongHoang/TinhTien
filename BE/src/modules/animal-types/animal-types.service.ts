@@ -1,52 +1,58 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { AnimalType, AnimalTypeDocument } from './schemas/animal-type.schemas';
 import { CreateAnimalTypeDto } from './dto/create-animal-type.dto';
 import { UpdateAnimalTypeDto } from './dto/update-animal-type.dto';
+import { AnimalType } from './schemas/animal-type.schemas';
 
 @Injectable()
-export class AnimalTypesService {
+export class AnimalTypeService {
   constructor(
-    @InjectModel(AnimalType.name)
-    private animalTypeModel: Model<AnimalTypeDocument>,
+    @InjectModel(AnimalType.name) private animalTypeModel: Model<AnimalType>,
   ) {}
 
-  async create(dto: CreateAnimalTypeDto): Promise<AnimalTypeDocument> {
-    const animalType = new this.animalTypeModel(dto);
+  async seedDefaultAnimalTypes() {
+    const count = await this.animalTypeModel.countDocuments();
+    if (count > 0) {
+      console.log('✅ Animal types already exist, skipping seed');
+      return;
+    }
+
+    const defaultAnimalTypes = [
+      { name: 'Heo', unit: 'con', description: 'Lợn nuôi' },
+      { name: 'Bò', unit: 'con', description: 'Bò nuôi' },
+      { name: 'Gà', unit: 'con', description: 'Gà nuôi' },
+      { name: 'Trâu', unit: 'con', description: 'Trâu nuôi' },
+    ];
+
+    try {
+      const created = await this.animalTypeModel.insertMany(defaultAnimalTypes);
+      console.log(`✅ Seeded ${created.length} default animal types`);
+    } catch (error) {
+      console.error('❌ Error seeding animal types:', error.message);
+    }
+  }
+
+  create(createAnimalTypeDto: CreateAnimalTypeDto) {
+    const animalType = new this.animalTypeModel(createAnimalTypeDto);
     return animalType.save();
   }
 
-  async findAll(): Promise<AnimalTypeDocument[]> {
-    return this.animalTypeModel.find().exec();
+  findAll() {
+    return this.animalTypeModel.find();
   }
 
-  async findById(id: string): Promise<AnimalTypeDocument> {
-    const animalType = await this.animalTypeModel.findById(id).exec();
-    if (!animalType) {
-      throw new NotFoundException(`AnimalType with ID ${id} not found`);
-    }
-    return animalType;
+  findById(id: string) {
+    return this.animalTypeModel.findById(id);
   }
 
-  async update(
-    id: string,
-    dto: UpdateAnimalTypeDto,
-  ): Promise<AnimalTypeDocument> {
-    const animalType = await this.animalTypeModel
-      .findByIdAndUpdate(id, dto, { new: true })
-      .exec();
-    if (!animalType) {
-      throw new NotFoundException(`AnimalType with ID ${id} not found`);
-    }
-    return animalType;
+  update(id: string, updateAnimalTypeDto: UpdateAnimalTypeDto) {
+    return this.animalTypeModel.findByIdAndUpdate(id, updateAnimalTypeDto, {
+      new: true,
+    });
   }
 
-  async delete(id: string): Promise<AnimalTypeDocument> {
-    const animalType = await this.animalTypeModel.findByIdAndDelete(id).exec();
-    if (!animalType) {
-      throw new NotFoundException(`AnimalType with ID ${id} not found`);
-    }
-    return animalType;
+  delete(id: string) {
+    return this.animalTypeModel.findByIdAndDelete(id);
   }
 }

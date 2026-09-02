@@ -88,9 +88,36 @@ export const animalTypesApi = {
     }),
 };
 
-// ============ EXPORT ============
+// ============ CALCULATION HISTORY API ============
+export const calculationHistoryApi = {
+  create: (data: {
+    batchId: string;
+    pricePerUnit: number;
+    slaughterPricePerUnit?: number;
+    transportCost?: number;
+  }) =>
+    request<any>("/calculation-history", {
+      method: "POST",
+      body: data,
+    }),
+
+  getAll: () => request<any[]>("/calculation-history"),
+
+  getByBatch: (batchId: string) =>
+    request<any[]>(`/calculation-history/batch/${batchId}`),
+
+  getById: (id: string) => request<any>(`/calculation-history/${id}`),
+
+  delete: (id: string) =>
+    request<any>(`/calculation-history/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+// Cập nhật object api
 export const api = {
   batches: batchesApi,
   owners: ownersApi,
   animalTypes: animalTypesApi,
+  calculationHistory: calculationHistoryApi,
 };

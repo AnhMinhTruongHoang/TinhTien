@@ -1,48 +1,84 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Owner, OwnerDocument } from './schemas/owner.schemas';
 import { CreateOwnerDto } from './dto/create-owner.dto';
 import { UpdateOwnerDto } from './dto/update-owner.dto';
+import { Owner } from './schemas/owner.schemas';
 
 @Injectable()
-export class OwnersService {
-  constructor(
-    @InjectModel(Owner.name) private ownerModel: Model<OwnerDocument>,
-  ) {}
+export class OwnerService {
+  constructor(@InjectModel(Owner.name) private ownerModel: Model<Owner>) {}
 
-  async create(dto: CreateOwnerDto): Promise<OwnerDocument> {
-    const owner = new this.ownerModel(dto);
+  async seedDefaultOwners() {
+    const count = await this.ownerModel.countDocuments();
+    if (count > 0) {
+      console.log('✅ Owners already exist, skipping seed');
+      return;
+    }
+
+    const defaultOwners = [
+      { name: 'Thảo', contact: '', address: '' },
+      { name: 'Soi', contact: '', address: '' },
+      { name: 'Tuấn', contact: '', address: '' },
+      { name: 'Liên', contact: '', address: '' },
+      { name: 'Nhật', contact: '', address: '' },
+      { name: 'Hoàng', contact: '', address: '' },
+      { name: 'Vương', contact: '', address: '' },
+      { name: 'Thu', contact: '', address: '' },
+      { name: 'Đào', contact: '', address: '' },
+      { name: 'Thúy P.C', contact: '', address: '' },
+      { name: 'Vương', contact: '', address: '' },
+      { name: 'Phương', contact: '', address: '' },
+      { name: 'Hân', contact: '', address: '' },
+      { name: 'H. Xuân', contact: '', address: '' },
+      { name: 'H. Dây', contact: '', address: '' },
+      { name: 'Vy', contact: '', address: '' },
+      { name: 'Cảnh', contact: '', address: '' },
+      { name: 'Tuấn', contact: '', address: '' },
+      { name: 'Thầy Lâm', contact: '', address: '' },
+      { name: 'Mai', contact: '', address: '' },
+      { name: 'H. My', contact: '', address: '' },
+      { name: 'Kỳ', contact: '', address: '' },
+      { name: 'Anh', contact: '', address: '' },
+      { name: 'Vinh', contact: '', address: '' },
+      { name: 'Thúy D.', contact: '', address: '' },
+      { name: 'Thúy', contact: '', address: '' },
+      { name: 'Hoa', contact: '', address: '' },
+      { name: 'Hoài', contact: '', address: '' },
+      { name: 'Hân', contact: '', address: '' },
+      { name: 'Hết', contact: '', address: '' },
+      { name: 'Kiên', contact: '', address: '' },
+      { name: 'Phúc', contact: '', address: '' },
+      { name: 'Nhiêu', contact: '', address: '' },
+      { name: 'Bố', contact: '', address: '' },
+    ];
+
+    try {
+      const created = await this.ownerModel.insertMany(defaultOwners);
+      console.log(`✅ Seeded ${created.length} default owners`);
+    } catch (error) {
+      console.error('❌ Error seeding owners:', error.message);
+    }
+  }
+
+  create(createOwnerDto: CreateOwnerDto) {
+    const owner = new this.ownerModel(createOwnerDto);
     return owner.save();
   }
 
-  async findAll(): Promise<OwnerDocument[]> {
-    return this.ownerModel.find().exec();
+  findAll() {
+    return this.ownerModel.find();
   }
 
-  async findById(id: string): Promise<OwnerDocument> {
-    const owner = await this.ownerModel.findById(id).exec();
-    if (!owner) {
-      throw new NotFoundException(`Owner with ID ${id} not found`);
-    }
-    return owner;
+  findById(id: string) {
+    return this.ownerModel.findById(id);
   }
 
-  async update(id: string, dto: UpdateOwnerDto): Promise<OwnerDocument> {
-    const owner = await this.ownerModel
-      .findByIdAndUpdate(id, dto, { new: true })
-      .exec();
-    if (!owner) {
-      throw new NotFoundException(`Owner with ID ${id} not found`);
-    }
-    return owner;
+  update(id: string, updateOwnerDto: UpdateOwnerDto) {
+    return this.ownerModel.findByIdAndUpdate(id, updateOwnerDto, { new: true });
   }
 
-  async delete(id: string): Promise<OwnerDocument> {
-    const owner = await this.ownerModel.findByIdAndDelete(id).exec();
-    if (!owner) {
-      throw new NotFoundException(`Owner with ID ${id} not found`);
-    }
-    return owner;
+  delete(id: string) {
+    return this.ownerModel.findByIdAndDelete(id);
   }
 }

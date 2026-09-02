@@ -193,7 +193,10 @@ const AnimalTypes = () => {
 
       <Dialog open={open} onClose={handleClose} fullScreen={isMobile}>
         <Box sx={{ p: 3, minWidth: isMobile ? "auto" : 400 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>
+          <Typography
+            variant="h6"
+            sx={{ mb: 2, textAlign: "center", fontWeight: "bold" }}
+          >
             {editingId ? "Sửa Loại Động Vật" : "Thêm Loại Động Vật Mới"}
           </Typography>
           <TextField
