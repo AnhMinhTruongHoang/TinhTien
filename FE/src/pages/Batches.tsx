@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
+import dayjs, { Dayjs } from "dayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+
 import {
   Box,
   Button,
@@ -9,7 +12,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Dialog,
   TextField,
   Select,
   MenuItem,
@@ -20,6 +22,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+
 import {
   Edit,
   Delete,
@@ -29,100 +32,148 @@ import {
   RestartAlt,
   History,
 } from "@mui/icons-material";
+
 import { api } from "@/utils/api";
+
+import CalculationHistoryDialog from "@/components/CalculationHistoryDialog";
+import CalculateCostDialog from "@/components/CalculateCostDialog";
+import DailyLogFormDialog from "@/components/DailyLogFormDialog";
 
 const Batches = () => {
   const theme = useTheme();
+
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  const [batches, setBatches] = useState<Batches.Batch[]>([]);
+  // ================= DATA =================
+
   const [owners, setOwners] = useState<Owners.Owner[]>([]);
+
   const [animalTypes, setAnimalTypes] = useState<AnimalTypes.AnimalType[]>([]);
+
+  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
+
+  const [loading, setLoading] = useState(false);
+
+  // ================= DAILY LOG FORM =================
+
   const [open, setOpen] = useState(false);
+
+  const [editingDailyLog, setEditingDailyLog] = useState<any | null>(null);
+
+  // ================= CALCULATE =================
+
   const [costOpen, setCostOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
-  const [costResult, setCostResult] = useState<Batches.CostResult | null>(null);
+
+  const [selectedDailyLogId, setSelectedDailyLogId] = useState<string | null>(
+    null
+  );
+
+  // ================= HISTORY =================
+
+  const [costHistoryOpen, setCostHistoryOpen] = useState(false);
 
   // ================= FILTER =================
+
   const [searchText, setSearchText] = useState("");
+
   const [filterOwner, setFilterOwner] = useState("");
+
   const [filterAnimalType, setFilterAnimalType] = useState("");
 
-  // ================= CALCULATION HISTORY =================
-  const [costHistoryOpen, setCostHistoryOpen] = useState(false);
-  const [costHistory, setCostHistory] = useState<Batches.HistoryItem[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<Dayjs | null>(dayjs());
 
-  ////
-  const [formData, setFormData] = useState<Batches.CreateBatchDto>({
-    ownerId: "",
-    animalTypeId: "",
-    quantity: 0,
-  });
-  const [costData, setCostData] = useState<Batches.CalculateCostDto>({
-    batchId: "",
-    pricePerUnit: 0,
-  });
+  const [filterDate, setFilterDate] = useState<Dayjs | null>(null);
+
+  // ================= MONTH SUMMARY =================
+
+  const [monthSummary, setMonthSummary] = useState<any | null>(null);
+
+  const [loadingMonthSummary, setLoadingMonthSummary] = useState(false);
+
+  // =====================================================
+  // FETCH
+  // =====================================================
 
   useEffect(() => {
-    fetchBatches();
+    fetchDailyLogs();
     fetchOwners();
     fetchAnimalTypes();
   }, []);
 
-  const fetchBatches = async () => {
+  ////
+  const fetchDailyLogs = async () => {
     try {
-      const data = await api.batches.getAll();
-      setBatches(data);
+      setLoading(true);
+
+      const data = await api.dailyLogs.getAll();
+
+      console.table(
+        data.map((log: any) => ({
+          id: log._id,
+          date: log.date,
+          quantity: log.quantity,
+          animalType:
+            typeof log.animalType === "string"
+              ? log.animalType
+              : log.animalType?.name,
+
+          calculationId: log.latestCalculation?._id || null,
+
+          pricePerUnit: log.latestCalculation?.pricePerUnit ?? null,
+
+          totalCost: log.latestCalculation?.totalCost ?? null,
+
+          isPaid: log.latestCalculation?.isPaid ?? null,
+        }))
+      );
+
+      setDailyLogs(data);
     } catch (error) {
-      console.error("Error fetching batches:", error);
+      console.error("Không thể tải daily logs:", error);
+    } finally {
+      setLoading(false);
     }
   };
-
+  ///
   const fetchOwners = async () => {
     try {
       const data = await api.owners.getAll();
+
       setOwners(data);
     } catch (error) {
-      console.error("Error fetching owners:", error);
+      console.error("Không thể tải owners:", error);
     }
   };
 
   const fetchAnimalTypes = async () => {
     try {
       const data = await api.animalTypes.getAll();
+
       setAnimalTypes(data);
     } catch (error) {
-      console.error("Error fetching animal types:", error);
+      console.error("Không thể tải animal types:", error);
     }
   };
 
-  const fetchCostHistory = async (batchId?: string) => {
-    try {
-      setLoadingHistory(true);
-      const data = batchId
-        ? await api.calculationHistory.getByBatch(batchId)
-        : await api.calculationHistory.getAll();
-      setCostHistory(data);
-    } catch (error) {
-      console.error("Error fetching cost history:", error);
-      alert("Không thể tải lịch sử tính chi phí");
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
+  // =====================================================
+  // FILTER
+  // =====================================================
 
-  // ================= FILTER DATA =================
-  const filteredBatches = useMemo(() => {
-    return batches.filter((batch) => {
+  const filteredDailyLogs = useMemo(() => {
+    return dailyLogs.filter((dailyLog) => {
       const ownerName =
-        typeof batch.owner === "string" ? batch.owner : batch.owner?.name || "";
+        typeof dailyLog.owner === "string"
+          ? dailyLog.owner
+          : dailyLog.owner?.name || "";
 
       const animalTypeName =
-        typeof batch.animalType === "string"
-          ? batch.animalType
-          : batch.animalType?.name || "";
+        typeof dailyLog.animalType === "string"
+          ? dailyLog.animalType
+          : dailyLog.animalType?.name || "";
+
+      const dateText = dailyLog.date
+        ? dayjs(dailyLog.date).format("DD/MM/YYYY")
+        : "";
 
       const keyword = searchText.toLowerCase().trim();
 
@@ -130,189 +181,278 @@ const Batches = () => {
         !keyword ||
         ownerName.toLowerCase().includes(keyword) ||
         animalTypeName.toLowerCase().includes(keyword) ||
-        batch.originAddress?.toLowerCase().includes(keyword) ||
-        batch.destinationAddress?.toLowerCase().includes(keyword);
+        dateText.includes(keyword);
 
       const ownerId =
-        typeof batch.owner === "string" ? batch.owner : batch.owner?._id;
+        typeof dailyLog.owner === "string"
+          ? dailyLog.owner
+          : dailyLog.owner?._id;
 
       const animalTypeId =
-        typeof batch.animalType === "string"
-          ? batch.animalType
-          : batch.animalType?._id;
+        typeof dailyLog.animalType === "string"
+          ? dailyLog.animalType
+          : dailyLog.animalType?._id;
 
       const matchOwner = !filterOwner || ownerId === filterOwner;
 
       const matchAnimalType =
         !filterAnimalType || animalTypeId === filterAnimalType;
 
-      return matchSearch && matchOwner && matchAnimalType;
+      const logDate = dayjs(dailyLog.date);
+
+      const matchMonth =
+        !filterMonth ||
+        logDate.format("YYYY-MM") === filterMonth.format("YYYY-MM");
+
+      const matchDate =
+        !filterDate ||
+        logDate.format("YYYY-MM-DD") === filterDate.format("YYYY-MM-DD");
+
+      return (
+        matchSearch && matchOwner && matchAnimalType && matchMonth && matchDate
+      );
     });
-  }, [batches, searchText, filterOwner, filterAnimalType]);
+  }, [
+    dailyLogs,
+    searchText,
+    filterOwner,
+    filterAnimalType,
+    filterMonth,
+    filterDate,
+  ]);
+
+  // =====================================================
+  // RESET FILTER
+  // =====================================================
 
   const handleResetFilter = () => {
     setSearchText("");
+
     setFilterOwner("");
+
     setFilterAnimalType("");
+
+    // Quay về tháng hiện tại
+    setFilterMonth(dayjs());
+
+    // Không chọn ngày cụ thể
+    setFilterDate(null);
+
+    // Xóa kết quả tổng tháng
+    setMonthSummary(null);
   };
 
-  const handleOpen = (batch?: Batches.Batch) => {
-    if (batch) {
-      setFormData({
-        ownerId:
-          typeof batch.owner === "string" ? batch.owner : batch.owner._id,
-        animalTypeId:
-          typeof batch.animalType === "string"
-            ? batch.animalType
-            : batch.animalType._id,
-        quantity: batch.quantity,
-        quantityNotSlaughtered: batch.quantityNotSlaughtered,
-        notes: batch.notes,
-      });
-      setEditingId(batch._id);
-    } else {
-      setFormData({ ownerId: "", animalTypeId: "", quantity: 0 });
-      setEditingId(null);
+  // =====================================================
+  // MONTH SUMMARY
+  // =====================================================
+
+  const handleMonthSummary = async () => {
+    if (!filterOwner || !filterAnimalType) {
+      return;
     }
+
+    try {
+      setLoadingMonthSummary(true);
+
+      const month = (filterMonth || dayjs()).format("YYYY-MM");
+
+      const result = await api.dailyLogs.monthSummary(
+        filterOwner,
+        filterAnimalType,
+        month
+      );
+
+      setMonthSummary(result);
+    } catch (error) {
+      console.error("Không thể tổng hợp tháng:", error);
+
+      alert("Không thể tổng hợp tháng");
+    } finally {
+      setLoadingMonthSummary(false);
+    }
+  };
+
+  // =====================================================
+  // OPEN / CLOSE DAILY LOG FORM
+  // =====================================================
+
+  const handleOpen = (dailyLog?: any) => {
+    setEditingDailyLog(dailyLog || null);
+
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setEditingId(null);
+
+    setEditingDailyLog(null);
   };
 
-  const handleSave = async () => {
-    try {
-      if (!formData.ownerId) {
-        alert("Vui lòng chọn chủ động vật");
-        return;
-      }
-
-      if (!formData.animalTypeId) {
-        alert("Vui lòng chọn loại động vật");
-        return;
-      }
-
-      if (!formData.quantity || formData.quantity <= 0) {
-        alert("Số lượng phải lớn hơn 0");
-        return;
-      }
-
-      const quantityNotSlaughtered = formData.quantityNotSlaughtered ?? 0;
-
-      if (quantityNotSlaughtered < 0) {
-        alert("Số lượng không giết mổ không được âm");
-        return;
-      }
-
-      if (quantityNotSlaughtered > formData.quantity) {
-        alert("Số lượng không giết mổ không được lớn hơn tổng số lượng");
-        return;
-      }
-
-      if (editingId) {
-        await api.batches.update(editingId, formData);
-      } else {
-        await api.batches.create(formData);
-      }
-
-      await fetchBatches();
-
-      handleClose();
-    } catch (error) {
-      console.error("Error saving batch:", error);
-
-      alert("Không thể lưu lô động vật");
-    }
-  };
+  // =====================================================
+  // DELETE DAILY LOG
+  // =====================================================
 
   const handleDelete = async (id: string) => {
-    if (confirm("Bạn có chắc chắn muốn xóa?")) {
-      try {
-        await api.batches.delete(id);
-        fetchBatches();
-      } catch (error) {
-        console.error("Error deleting batch:", error);
-      }
-    }
-  };
-
-  const handleCalculateCost = async () => {
-    if (!selectedBatchId) return;
-
-    if (costData.pricePerUnit <= 0) {
-      alert("Giá mỗi đầu phải lớn hơn 0");
-      return;
-    }
-
-    if ((costData.slaughterPricePerUnit ?? 0) < 0) {
-      alert("Giá giết mổ không được âm");
-      return;
-    }
-
-    if ((costData.transportCost ?? 0) < 0) {
-      alert("Chi phí vận chuyển không được âm");
+    if (!confirm("Bạn có chắc chắn muốn xóa ngày này?")) {
       return;
     }
 
     try {
-      // Gọi API mới → vừa tính vừa lưu lịch sử
-      const result = await api.calculationHistory.create({
-        batchId: selectedBatchId,
-        pricePerUnit: costData.pricePerUnit,
-        slaughterPricePerUnit: costData.slaughterPricePerUnit,
-        transportCost: costData.transportCost,
-      });
+      await api.dailyLogs.delete(id);
 
-      // Hiển thị kết quả ngay
-      setCostResult({
-        batchId: result.batch,
-        quantity: result.quantity,
-        quantityNotSlaughtered: result.quantityNotSlaughtered,
-        slaughterQuantity: result.slaughterQuantity,
-        animalCost: result.animalCost,
-        slaughterCost: result.slaughterCost,
-        transportCost: result.transportCost,
-        totalCost: result.totalCost,
-        costPerUnit: result.costPerUnit,
-      });
+      await fetchDailyLogs();
 
-      // Cập nhật lại danh sách lịch sử (nếu đang mở)
-      if (costHistoryOpen) {
-        await fetchCostHistory();
+      if (selectedDailyLogId === id) {
+        setSelectedDailyLogId(null);
       }
     } catch (error) {
-      console.error("Error calculating cost:", error);
-      alert("Không thể tính chi phí");
+      console.error("Xóa daily log thất bại:", error);
+
+      alert("Xóa thất bại");
     }
   };
+
+  ///
+  const handleMarkAsPaid = async (dailyLog: any) => {
+    const calculation = dailyLog.latestCalculation;
+
+    if (!calculation?._id) {
+      alert("Daily Log này chưa được tính chi phí");
+      return;
+    }
+
+    if (calculation.isPaid) {
+      return;
+    }
+
+    const confirmed = confirm(
+      `Xác nhận đã nhận ${Number(calculation.totalCost || 0).toLocaleString(
+        "vi-VN"
+      )}đ?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const result = await api.calculationHistory.markAsPaid(calculation._id);
+
+      // Update UI ngay
+      setDailyLogs((prev) =>
+        prev.map((log) =>
+          log._id === dailyLog._id
+            ? {
+                ...log,
+
+                latestCalculation: {
+                  ...log.latestCalculation,
+
+                  isPaid: true,
+
+                  paidAt: result.paidAt || new Date().toISOString(),
+                },
+              }
+            : log
+        )
+      );
+
+      // Nếu đang hiển thị tổng tháng
+      // thì tính lại totalPaid
+      if (monthSummary && filterOwner && filterAnimalType) {
+        await handleMonthSummary();
+      }
+    } catch (error) {
+      console.error("Xác nhận thanh toán thất bại:", error);
+
+      alert("Không thể xác nhận thanh toán");
+    }
+  };
+  ///
+
+  // =====================================================
+  // FORMAT MONEY
+  // =====================================================
+
+  const formatMoney = (value: number) => {
+    return `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+  };
+
+  ///
+  const handleCalculationUpdated = async (result: any) => {
+    const dailyLogId =
+      typeof result.dailyLog === "string"
+        ? result.dailyLog
+        : result.dailyLog?._id || selectedDailyLogId;
+
+    if (!dailyLogId) {
+      return;
+    }
+
+    // Update UI ngay lập tức
+    setDailyLogs((prev) =>
+      prev.map((log) =>
+        log._id === dailyLogId
+          ? {
+              ...log,
+              latestCalculation: result,
+            }
+          : log
+      )
+    );
+
+    // Đồng bộ lại với backend
+    try {
+      const freshLogs = await api.dailyLogs.getAll();
+
+      const updatedLog = freshLogs.find((log) => log._id === dailyLogId);
+
+      // Chỉ replace nếu backend đã trả latestCalculation
+      if (updatedLog?.latestCalculation) {
+        setDailyLogs(freshLogs);
+      }
+    } catch (error) {
+      console.error("Không thể refresh DailyLog:", error);
+    }
+  };
+  ///
 
   return (
     <Box>
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
+
           mb: 3,
+
           flexDirection: isMobile ? "column" : "row",
+
           gap: isMobile ? 2 : 0,
         }}
       >
         <Typography variant={isMobile ? "h5" : "h4"}>
-          Quản Lý Lô Động Vật
+          Nhật Ký Giết Mổ
         </Typography>
+
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpen()}
           fullWidth={isMobile}
         >
-          Thêm Lô Mới
+          Thêm Nhật Ký
         </Button>
       </Box>
 
-      {/* ================= FILTER ================= */}
+      {/* =====================================================
+          FILTER
+      ===================================================== */}
+
       <Paper
         sx={{
           p: 2,
@@ -333,29 +473,40 @@ const Batches = () => {
           <Typography variant="h6">Bộ Lọc</Typography>
         </Box>
 
+        {/* ================= INPUT FILTER ================= */}
+
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr auto",
+
+            gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr 1fr 1fr 1fr",
+
             gap: 2,
-            alignItems: "center",
           }}
         >
+          {/* SEARCH */}
+
           <TextField
             fullWidth
             size="small"
             label="Tìm kiếm"
-            placeholder="Tên chủ, loại động vật, địa chỉ..."
+            placeholder="Tên chủ, loại, ngày..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
           />
+
+          {/* OWNER */}
 
           <Select
             fullWidth
             size="small"
             displayEmpty
             value={filterOwner}
-            onChange={(e) => setFilterOwner(e.target.value)}
+            onChange={(e) => {
+              setFilterOwner(e.target.value);
+
+              setMonthSummary(null);
+            }}
           >
             <MenuItem value="">Tất cả chủ</MenuItem>
 
@@ -366,12 +517,18 @@ const Batches = () => {
             ))}
           </Select>
 
+          {/* ANIMAL TYPE */}
+
           <Select
             fullWidth
             size="small"
             displayEmpty
             value={filterAnimalType}
-            onChange={(e) => setFilterAnimalType(e.target.value)}
+            onChange={(e) => {
+              setFilterAnimalType(e.target.value);
+
+              setMonthSummary(null);
+            }}
           >
             <MenuItem value="">Tất cả loại</MenuItem>
 
@@ -382,6 +539,69 @@ const Batches = () => {
             ))}
           </Select>
 
+          {/* MONTH */}
+
+          <DatePicker
+            label="Tháng"
+            views={["year", "month"]}
+            value={filterMonth}
+            onChange={(newValue) => {
+              setFilterMonth(newValue);
+
+              // Đổi tháng
+              // thì bỏ ngày đang chọn
+              setFilterDate(null);
+
+              setMonthSummary(null);
+            }}
+            format="MM/YYYY"
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                size: "small",
+              },
+            }}
+          />
+
+          {/* DATE */}
+
+          <DatePicker
+            label="Ngày"
+            value={filterDate}
+            onChange={(newValue) => {
+              setFilterDate(newValue);
+
+              // Chọn ngày
+              // tự đồng bộ tháng
+              if (newValue) {
+                setFilterMonth(newValue.startOf("month"));
+              }
+            }}
+            format="DD/MM/YYYY"
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                size: "small",
+              },
+            }}
+          />
+        </Box>
+
+        {/* ================= FILTER ACTIONS ================= */}
+
+        <Box
+          sx={{
+            display: "flex",
+
+            flexDirection: isMobile ? "column" : "row",
+
+            gap: 1.5,
+
+            mt: 2,
+
+            justifyContent: "flex-end",
+          }}
+        >
           <Button
             variant="outlined"
             startIcon={<RestartAlt />}
@@ -390,7 +610,18 @@ const Batches = () => {
           >
             Xóa lọc
           </Button>
+
+          <Button
+            variant="contained"
+            onClick={handleMonthSummary}
+            disabled={!filterOwner || !filterAnimalType || loadingMonthSummary}
+            fullWidth={isMobile}
+          >
+            {loadingMonthSummary ? "Đang tính..." : "Tổng tháng"}
+          </Button>
         </Box>
+
+        {/* ================= COUNT ================= */}
 
         <Typography
           variant="body2"
@@ -399,9 +630,185 @@ const Batches = () => {
             color: "text.secondary",
           }}
         >
-          Đang hiển thị {filteredBatches.length} / {batches.length} lô
+          Đang hiển thị {filteredDailyLogs.length} / {dailyLogs.length} ngày
         </Typography>
+
+        {/* =====================================================
+            MONTH SUMMARY
+        ===================================================== */}
+
+        {monthSummary && (
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+
+              borderRadius: 2,
+
+              border: "1px solid",
+
+              borderColor: "primary.light",
+
+              backgroundColor: "#eef6ff",
+            }}
+          >
+            <Box
+              sx={{
+                display: "grid",
+
+                gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)",
+
+                gap: 2,
+              }}
+            >
+              {/* THÁNG */}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Tháng
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  {dayjs(`${monthSummary.month}-01`).format("MM/YYYY")}
+                </Typography>
+              </Box>
+
+              {/* TỔNG NGÀY */}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Tổng số ngày có log
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                  }}
+                >
+                  {monthSummary.totalDays || 0} ngày
+                </Typography>
+              </Box>
+
+              {/* TỔNG SỐ CON */}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Tổng số con
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+
+                    color: "primary.main",
+
+                    fontSize: 18,
+                  }}
+                >
+                  {Number(monthSummary.totalQuantity || 0).toLocaleString(
+                    "vi-VN"
+                  )}{" "}
+                  con
+                </Typography>
+              </Box>
+
+              {/* TỔNG TIỀN */}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Tổng tiền
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: 18,
+                  }}
+                >
+                  {formatMoney(monthSummary.totalCost || 0)}
+                </Typography>
+              </Box>
+
+              {/* ĐÃ NHẬN */}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Đã nhận
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+
+                    color: "success.main",
+
+                    fontSize: 18,
+                  }}
+                >
+                  {formatMoney(monthSummary.totalPaid || 0)}
+                </Typography>
+              </Box>
+
+              {/* CHƯA NHẬN */}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Chưa nhận
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontWeight: 700,
+
+                    color: "warning.main",
+
+                    fontSize: 18,
+                  }}
+                >
+                  {formatMoney(monthSummary.totalUnpaid || 0)}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* ================= PAYMENT STATUS ================= */}
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                mt: 2,
+                pt: 1.5,
+
+                borderTop: "1px solid",
+
+                borderColor: "divider",
+              }}
+            >
+              Đã nhận tiền {monthSummary.paidDays || 0} /{" "}
+              {monthSummary.calculatedDays || 0} ngày đã tính
+            </Typography>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                mt: 0.5,
+              }}
+            >
+              Đã tính chi phí {monthSummary.calculatedDays || 0} /{" "}
+              {monthSummary.totalDays || 0} ngày
+            </Typography>
+          </Box>
+        )}
       </Paper>
+
+      {/* =====================================================
+          HISTORY BUTTON
+      ===================================================== */}
 
       <Box
         sx={{
@@ -413,568 +820,454 @@ const Batches = () => {
         <Button
           variant="outlined"
           startIcon={<History />}
-          onClick={async () => {
-            setCostHistoryOpen(true);
-            await fetchCostHistory();
-          }}
+          onClick={() => setCostHistoryOpen(true)}
         >
           Xem lịch sử tính chi phí
         </Button>
       </Box>
 
-      {isMobile ? (
-        // Mobile: Card View
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {filteredBatches.map((batch) => (
-            <Card key={batch._id}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold" }}>
-                  {typeof batch.owner === "string"
-                    ? batch.owner
-                    : batch.owner.name}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Loại:</strong>{" "}
-                  {typeof batch.animalType === "string"
-                    ? batch.animalType
-                    : batch.animalType.name}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Số Lượng:</strong> {batch.quantity}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  <strong>Ngày Ghi:</strong>{" "}
-                  {new Date(batch.recordDate).toLocaleDateString("vi-VN")}
-                </Typography>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setSelectedBatchId(batch._id);
+      {/* =====================================================
+          DAILY LOG LIST
+      ===================================================== */}
 
-                      setCostData({
-                        batchId: batch._id,
-                        pricePerUnit: 0,
-                        slaughterPricePerUnit: 0,
-                        transportCost: 0,
-                      });
+      {loading ? (
+        <Paper
+          sx={{
+            p: 4,
+            textAlign: "center",
+          }}
+        >
+          <Typography>Đang tải...</Typography>
+        </Paper>
+      ) : filteredDailyLogs.length === 0 ? (
+        <Paper
+          sx={{
+            p: 4,
+            textAlign: "center",
+          }}
+        >
+          <Typography color="text.secondary">Chưa có dữ liệu.</Typography>
+        </Paper>
+      ) : isMobile ? (
+        /* =====================================================
+            MOBILE
+        ===================================================== */
 
-                      setCostResult(null);
-                      setCostOpen(true);
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          {filteredDailyLogs.map((dailyLog) => {
+            const calculation = dailyLog.latestCalculation;
+
+            return (
+              <Card
+                key={dailyLog._id}
+                sx={{
+                  borderRadius: 2,
+                }}
+              >
+                <CardContent>
+                  {/* DATE */}
+
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      mb: 1,
+                      fontWeight: "bold",
+                      textAlign: "center",
                     }}
                   >
-                    <Calculate fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleOpen(batch)}
-                    sx={{ flex: 1 }}
+                    {dayjs(dailyLog.date).format("DD/MM/YYYY")}
+                  </Typography>
+
+                  {/* OWNER */}
+
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    <strong>Chủ:</strong>{" "}
+                    {typeof dailyLog.owner === "string"
+                      ? dailyLog.owner
+                      : dailyLog.owner?.name || "—"}
+                  </Typography>
+
+                  {/* ANIMAL */}
+
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    <strong>Loại:</strong>{" "}
+                    {typeof dailyLog.animalType === "string"
+                      ? dailyLog.animalType
+                      : dailyLog.animalType?.name || "—"}
+                  </Typography>
+
+                  {/* QUANTITY */}
+
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    <strong>Số con:</strong> {dailyLog.quantity}
+                  </Typography>
+
+                  {/* PRICE */}
+
+                  <Typography variant="body2" sx={{ mb: 0.5 }}>
+                    <strong>Giá / con:</strong>{" "}
+                    {calculation ? formatMoney(calculation.pricePerUnit) : "—"}
+                  </Typography>
+
+                  {/* TOTAL */}
+
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mb: 0.5,
+
+                      fontWeight: calculation ? 600 : 400,
+
+                      color: calculation ? "primary.main" : "text.secondary",
+                    }}
                   >
-                    <Edit fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(batch._id)}
-                    sx={{ flex: 1 }}
+                    <strong>Tổng tiền:</strong>{" "}
+                    {calculation ? formatMoney(calculation.totalCost) : "—"}
+                  </Typography>
+
+                  {/* NOTES */}
+
+                  {dailyLog.notes && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        mb: 1,
+                      }}
+                    >
+                      <strong>Ghi chú:</strong> {dailyLog.notes}
+                    </Typography>
+                  )}
+
+                  {/* PAYMENT STATUS */}
+
+                  <Box sx={{ mt: 1.5 }}>
+                    {!calculation ? (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          fontWeight: 600,
+                          textAlign: "center",
+                        }}
+                      >
+                        Chưa tính chi phí
+                      </Typography>
+                    ) : calculation.isPaid ? (
+                      <Typography
+                        variant="body2"
+                        color="success.main"
+                        sx={{
+                          fontWeight: 700,
+                          textAlign: "center",
+                        }}
+                      >
+                        ✓ Đã nhận tiền
+                      </Typography>
+                    ) : (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="success"
+                        fullWidth
+                        onClick={() => handleMarkAsPaid(dailyLog)}
+                      >
+                        Xác nhận đã nhận tiền
+                      </Button>
+                    )}
+                  </Box>
+
+                  {/* ACTIONS */}
+
+                  <Box
+                    sx={{
+                      display: "flex",
+
+                      gap: 1.5,
+
+                      mt: 2,
+
+                      justifyContent: "center",
+
+                      alignItems: "center",
+                    }}
                   >
-                    <Delete fontSize="small" />
-                  </IconButton>
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
+                    {/* CALCULATE */}
+
+                    {!calculation?.isPaid && (
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => {
+                          setSelectedDailyLogId(dailyLog._id);
+
+                          setCostOpen(true);
+                        }}
+                        title={
+                          calculation ? "Tính lại chi phí" : "Tính chi phí"
+                        }
+                      >
+                        <Calculate fontSize="small" />
+                      </IconButton>
+                    )}
+
+                    {/* EDIT */}
+
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpen(dailyLog)}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+
+                    {/* DELETE */}
+
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDelete(dailyLog._id)}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
         </Box>
       ) : (
-        // Desktop: Table View
-        <TableContainer component={Paper} sx={{ overflowX: "auto" }}>
+        /* =====================================================
+            DESKTOP
+        ===================================================== */
+
+        <TableContainer component={Paper}>
           <Table>
+            {/* ================= TABLE HEAD ================= */}
+
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+              <TableRow
+                sx={{
+                  backgroundColor: "#f5f5f5",
+                }}
+              >
+                <TableCell>
+                  <strong>Ngày</strong>
+                </TableCell>
+
                 <TableCell>
                   <strong>Chủ Động Vật</strong>
                 </TableCell>
+
                 <TableCell>
                   <strong>Loại Động Vật</strong>
                 </TableCell>
+
                 <TableCell>
-                  <strong>Số Lượng</strong>
+                  <strong>Số Con</strong>
                 </TableCell>
+
                 <TableCell>
-                  <strong>Không Giết Mổ</strong>
+                  <strong>Giá / Con</strong>
                 </TableCell>
+
                 <TableCell>
-                  <strong>Ngày Ghi</strong>
+                  <strong>Tổng Tiền</strong>
                 </TableCell>
+
+                <TableCell>
+                  <strong>Ghi Chú</strong>
+                </TableCell>
+
+                <TableCell>
+                  <strong>Thanh Toán</strong>
+                </TableCell>
+
                 <TableCell align="center">
                   <strong>Hành Động</strong>
                 </TableCell>
               </TableRow>
             </TableHead>
+
+            {/* ================= TABLE BODY ================= */}
+
             <TableBody>
-              {filteredBatches.map((batch) => (
-                <TableRow key={batch._id}>
-                  <TableCell>
-                    {typeof batch.owner === "string"
-                      ? batch.owner
-                      : batch.owner.name}
-                  </TableCell>
-                  <TableCell>
-                    {typeof batch.animalType === "string"
-                      ? batch.animalType
-                      : batch.animalType.name}
-                  </TableCell>
-                  <TableCell>{batch.quantity}</TableCell>
-                  <TableCell>{batch.quantityNotSlaughtered}</TableCell>
-                  <TableCell>
-                    {new Date(batch.recordDate).toLocaleDateString("vi-VN")}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setSelectedBatchId(batch._id);
+              {filteredDailyLogs.map((dailyLog) => {
+                const calculation = dailyLog.latestCalculation;
 
-                        setCostData({
-                          batchId: batch._id,
-                          pricePerUnit: 0,
-                          slaughterPricePerUnit: 0,
-                          transportCost: 0,
-                        });
+                return (
+                  <TableRow key={dailyLog._id}>
+                    {/* DATE */}
 
-                        setCostResult(null);
-                        setCostOpen(true);
-                      }}
-                    >
-                      <Calculate fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleOpen(batch)}>
-                      <Edit fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDelete(batch._id)}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    <TableCell>
+                      {dayjs(dailyLog.date).format("DD/MM/YYYY")}
+                    </TableCell>
+
+                    {/* OWNER */}
+
+                    <TableCell>
+                      {typeof dailyLog.owner === "string"
+                        ? dailyLog.owner
+                        : dailyLog.owner?.name || "—"}
+                    </TableCell>
+
+                    {/* ANIMAL */}
+
+                    <TableCell>
+                      {typeof dailyLog.animalType === "string"
+                        ? dailyLog.animalType
+                        : dailyLog.animalType?.name || "—"}
+                    </TableCell>
+
+                    {/* QUANTITY */}
+
+                    <TableCell>{dailyLog.quantity}</TableCell>
+
+                    {/* PRICE / UNIT */}
+
+                    <TableCell>
+                      {calculation
+                        ? formatMoney(calculation.pricePerUnit)
+                        : "—"}
+                    </TableCell>
+
+                    {/* TOTAL COST */}
+
+                    <TableCell>
+                      {calculation ? formatMoney(calculation.totalCost) : "—"}
+                    </TableCell>
+
+                    {/* NOTES */}
+
+                    <TableCell>{dailyLog.notes || "—"}</TableCell>
+
+                    {/* PAYMENT */}
+
+                    <TableCell>
+                      {!calculation ? (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Chưa tính
+                        </Typography>
+                      ) : calculation.isPaid ? (
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          sx={{
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ✓ Đã nhận tiền
+                        </Typography>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          onClick={() => handleMarkAsPaid(dailyLog)}
+                          sx={{
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Xác nhận
+                        </Button>
+                      )}
+                    </TableCell>
+
+                    {/* ACTIONS */}
+
+                    <TableCell align="center">
+                      {/* CALCULATE */}
+
+                      {!calculation?.isPaid && (
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => {
+                            setSelectedDailyLogId(dailyLog._id);
+
+                            setCostOpen(true);
+                          }}
+                          title={
+                            calculation ? "Tính lại chi phí" : "Tính chi phí"
+                          }
+                        >
+                          <Calculate fontSize="small" />
+                        </IconButton>
+                      )}
+
+                      {/* EDIT */}
+
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpen(dailyLog)}
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+
+                      {/* DELETE */}
+
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(dailyLog._id)}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
       )}
 
-      {/* Dialog thêm/sửa lô */}
-      <Dialog open={open} onClose={handleClose} fullScreen={isMobile}>
-        <Box sx={{ p: 3, minWidth: isMobile ? "auto" : 450 }}>
-          <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
-            {editingId ? "Sửa Lô" : "Thêm Lô Mới"}
-          </Typography>
-          <Select
-            fullWidth
-            value={formData.ownerId}
-            onChange={(e) =>
-              setFormData({ ...formData, ownerId: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          >
-            <MenuItem value="">-- Chọn Chủ --</MenuItem>
-            {owners.map((owner) => (
-              <MenuItem key={owner._id} value={owner._id}>
-                {owner.name}
-              </MenuItem>
-            ))}
-          </Select>
-          <Select
-            fullWidth
-            value={formData.animalTypeId}
-            onChange={(e) =>
-              setFormData({ ...formData, animalTypeId: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          >
-            <MenuItem value="">-- Chọn Loại --</MenuItem>
-            {animalTypes.map((type) => (
-              <MenuItem key={type._id} value={type._id}>
-                {type.name}
-              </MenuItem>
-            ))}
-          </Select>
-          <TextField
-            fullWidth
-            label="Số Lượng"
-            type="number"
-            slotProps={{
-              htmlInput: {
-                min: 1,
-              },
-            }}
-            value={formData.quantity}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                quantity:
-                  e.target.value === ""
-                    ? 0
-                    : Math.max(0, parseInt(e.target.value)),
-              })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Số Lượng Không Giết Mổ"
-            type="number"
-            slotProps={{
-              htmlInput: {
-                min: 1,
-              },
-            }}
-            value={formData.quantityNotSlaughtered || 0}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                quantityNotSlaughtered:
-                  e.target.value === ""
-                    ? 0
-                    : Math.max(0, parseInt(e.target.value)),
-              })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Địa Chỉ Nguồn"
-            value={formData.originAddress || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, originAddress: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Địa Chỉ Đích"
-            value={formData.destinationAddress || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, destinationAddress: e.target.value })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Ghi Chú"
-            value={formData.notes || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, notes: e.target.value })
-            }
-            sx={{ mb: 2 }}
-            multiline
-            rows={3}
-          />
-          <Box
-            sx={{
-              display: "flex",
-              gap: 2,
-              justifyContent: "flex-end",
-              flexDirection: isMobile ? "column-reverse" : "row",
-            }}
-          >
-            <Button onClick={handleClose} fullWidth={isMobile}>
-              Hủy
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              fullWidth={isMobile}
-            >
-              Lưu
-            </Button>
-          </Box>
-        </Box>
-      </Dialog>
+      {/* =====================================================
+          DAILY LOG FORM
+      ===================================================== */}
 
-      {/* Dialog tính chi phí */}
-      <Dialog
+      <DailyLogFormDialog
+        open={open}
+        onClose={handleClose}
+        dailyLog={editingDailyLog}
+        owners={owners}
+        animalTypes={animalTypes}
+        onSaved={fetchDailyLogs}
+      />
+
+      {/* =====================================================
+          CALCULATE COST
+      ===================================================== */}
+
+      <CalculateCostDialog
         open={costOpen}
-        onClose={() => setCostOpen(false)}
-        fullScreen={isMobile}
-      >
-        <Box sx={{ p: 3, minWidth: isMobile ? "auto" : 450 }}>
-          <Typography variant="h6" sx={{ mb: 2, textAlign: "center" }}>
-            Tính Chi Phí
-          </Typography>
-          <TextField
-            fullWidth
-            label="Giá Mỗi Đầu (đ)"
-            type="number"
-            value={costData.pricePerUnit}
-            onChange={(e) =>
-              setCostData({
-                ...costData,
-                pricePerUnit: parseInt(e.target.value),
-              })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Giá Giết Mổ Mỗi Đầu (đ)"
-            type="number"
-            value={costData.slaughterPricePerUnit || 0}
-            onChange={(e) =>
-              setCostData({
-                ...costData,
-                slaughterPricePerUnit: parseInt(e.target.value),
-              })
-            }
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Chi Phí Vận Chuyển (đ)"
-            type="number"
-            value={costData.transportCost || 0}
-            onChange={(e) =>
-              setCostData({
-                ...costData,
-                transportCost: parseInt(e.target.value),
-              })
-            }
-            sx={{ mb: 3 }}
-          />
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleCalculateCost}
-            sx={{ mb: 2 }}
-          >
-            Tính Chi Phí
-          </Button>
+        dailyLogId={selectedDailyLogId}
+        onCalculated={handleCalculationUpdated}
+        onClose={() => {
+          setCostOpen(false);
+          setSelectedDailyLogId(null);
+        }}
+      />
 
-          {costResult && (
-            <Card sx={{ backgroundColor: "#f5f5f5", mb: 2 }}>
-              <CardContent>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Kết Quả
-                </Typography>
-                <Box sx={{ fontSize: "0.9rem" }}>
-                  <Typography variant="body2">
-                    Số Lượng: {costResult.quantity}
-                  </Typography>
-                  <Typography variant="body2">
-                    Giết Mổ: {costResult.slaughterQuantity}
-                  </Typography>
-                  <Typography variant="body2">
-                    Chi Phí Mua: {costResult.animalCost.toLocaleString("vi-VN")}
-                    đ
-                  </Typography>
-                  <Typography variant="body2">
-                    Chi Phí Giết Mổ:{" "}
-                    {costResult.slaughterCost.toLocaleString("vi-VN")}đ
-                  </Typography>
-                  <Typography variant="body2">
-                    Chi Phí Vận Chuyển:{" "}
-                    {costResult.transportCost.toLocaleString("vi-VN")}đ
-                  </Typography>
-                  <Typography variant="h6" sx={{ mt: 2, color: "#1976d2" }}>
-                    Tổng Chi Phí: {costResult.totalCost.toLocaleString("vi-VN")}
-                    đ
-                  </Typography>
-                  <Typography variant="body2">
-                    Chi Phí Trung Bình/Đầu:{" "}
-                    {costResult.costPerUnit.toLocaleString("vi-VN")}đ
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
+      {/* =====================================================
+          CALCULATION HISTORY
+      ===================================================== */}
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 2,
-              justifyContent: "flex-end",
-              flexDirection: isMobile ? "column-reverse" : "row",
-            }}
-          >
-            <Button
-              onClick={() => {
-                setCostOpen(false);
-                setCostResult(null);
-              }}
-              fullWidth={isMobile}
-            >
-              Đóng
-            </Button>
-          </Box>
-        </Box>
-      </Dialog>
-
-      {/* ================= LỊCH SỬ TÍNH CHI PHÍ ================= */}
-      <Dialog
+      <CalculationHistoryDialog
         open={costHistoryOpen}
         onClose={() => setCostHistoryOpen(false)}
-        fullScreen={isMobile}
-        fullWidth
-        maxWidth="md"
-      >
-        <Box sx={{ p: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 3,
-            }}
-          >
-            <Typography variant="h6">Lịch Sử Tính Chi Phí</Typography>
-            <Button onClick={() => setCostHistoryOpen(false)}>Đóng</Button>
-          </Box>
-
-          {loadingHistory ? (
-            <Typography sx={{ textAlign: "center" }}>Đang tải...</Typography>
-          ) : costHistory.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: "center" }}>
-              <Typography color="text.secondary">
-                Chưa có lịch sử tính chi phí.
-              </Typography>
-            </Paper>
-          ) : (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                maxHeight: "70vh",
-                overflowY: "auto",
-              }}
-            >
-              {costHistory.map((item, index) => (
-                <Card key={item._id}>
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 2,
-                      }}
-                    >
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ fontWeight: "bold" }}
-                      >
-                        Lần tính #{costHistory.length - index}
-                      </Typography>
-
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(item.calculatedAt).toLocaleString("vi-VN")}
-                        </Typography>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={async () => {
-                            if (confirm("Bạn có chắc muốn xóa lần tính này?")) {
-                              try {
-                                await api.calculationHistory.delete(item._id);
-                                await fetchCostHistory();
-                              } catch (error) {
-                                alert("Xóa thất bại");
-                              }
-                            }
-                          }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
-                        gap: 1,
-                      }}
-                    >
-                      {/* ===== THÊM 2 DÒNG NÀY ===== */}
-                      <Typography>
-                        <strong>Chủ động vật:</strong>{" "}
-                        {typeof item.batch === "object" && item.batch?.owner
-                          ? typeof item.batch.owner === "string"
-                            ? item.batch.owner
-                            : item.batch.owner.name
-                          : "—"}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Loại động vật:</strong>{" "}
-                        {typeof item.batch === "object" &&
-                        item.batch?.animalType
-                          ? typeof item.batch.animalType === "string"
-                            ? item.batch.animalType
-                            : item.batch.animalType.name
-                          : "—"}
-                      </Typography>
-                      {/* ============================ */}
-
-                      <Typography>
-                        <strong>Batch ID:</strong>{" "}
-                        {typeof item.batch === "string"
-                          ? item.batch
-                          : item.batch?._id}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Số lượng:</strong> {item.quantity}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Giết mổ:</strong> {item.slaughterQuantity}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Không giết mổ:</strong>{" "}
-                        {item.quantityNotSlaughtered}
-                      </Typography>
-
-                      <Typography>
-                        <strong>Chi phí mua:</strong>{" "}
-                        {item.animalCost?.toLocaleString("vi-VN")}đ
-                      </Typography>
-
-                      <Typography>
-                        <strong>Chi phí giết mổ:</strong>{" "}
-                        {item.slaughterCost?.toLocaleString("vi-VN")}đ
-                      </Typography>
-
-                      <Typography>
-                        <strong>Chi phí vận chuyển:</strong>{" "}
-                        {item.transportCost?.toLocaleString("vi-VN")}đ
-                      </Typography>
-
-                      <Typography
-                        sx={{ color: "primary.main", fontWeight: "bold" }}
-                      >
-                        Tổng chi phí: {item.totalCost?.toLocaleString("vi-VN")}đ
-                      </Typography>
-
-                      <Typography
-                        sx={{ color: "success.main", fontWeight: "bold" }}
-                      >
-                        Trung bình / đầu:{" "}
-                        {item.costPerUnit?.toLocaleString("vi-VN")}đ
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
-            </Box>
-          )}
-        </Box>
-      </Dialog>
+      />
     </Box>
   );
 };

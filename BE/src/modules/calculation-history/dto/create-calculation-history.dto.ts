@@ -1,20 +1,5 @@
-import { IsMongoId, IsNumber, IsOptional, Min } from 'class-validator';
-
+// create-calculation-history.dto.ts
 export class CreateCalculationHistoryDto {
-  @IsMongoId()
-  batchId: string;
-
-  @IsNumber()
-  @Min(0)
+  dailyLogId: string;
   pricePerUnit: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  slaughterPricePerUnit?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  transportCost?: number;
 }

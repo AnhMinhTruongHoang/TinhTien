@@ -88,14 +88,57 @@ export const animalTypesApi = {
     }),
 };
 
+// ============ DAILY LOGS API ============
+export const dailyLogsApi = {
+  create: (data: {
+    ownerId: string;
+    animalTypeId: string;
+    date: string;
+    quantity: number;
+    notes?: string;
+  }) =>
+    request<any>("/daily-logs", {
+      method: "POST",
+      body: data,
+    }),
+
+  getAll: () => request<any[]>("/daily-logs"),
+
+  getById: (id: string) => request<any>(`/daily-logs/${id}`),
+
+  update: (
+    id: string,
+    data: {
+      ownerId?: string;
+      animalTypeId?: string;
+      date?: string;
+      quantity?: number;
+      notes?: string;
+    }
+  ) =>
+    request<any>(`/daily-logs/${id}`, {
+      method: "PUT",
+      body: data,
+    }),
+
+  delete: (id: string) =>
+    request<any>(`/daily-logs/${id}`, {
+      method: "DELETE",
+    }),
+
+  monthSummary: (ownerId: string, animalTypeId: string, month: string) =>
+    request<any>(
+      `/daily-logs/month-summary?ownerId=${encodeURIComponent(
+        ownerId
+      )}&animalTypeId=${encodeURIComponent(
+        animalTypeId
+      )}&month=${encodeURIComponent(month)}`
+    ),
+};
+
 // ============ CALCULATION HISTORY API ============
 export const calculationHistoryApi = {
-  create: (data: {
-    batchId: string;
-    pricePerUnit: number;
-    slaughterPricePerUnit?: number;
-    transportCost?: number;
-  }) =>
+  create: (data: { dailyLogId: string; pricePerUnit: number }) =>
     request<any>("/calculation-history", {
       method: "POST",
       body: data,
@@ -103,20 +146,24 @@ export const calculationHistoryApi = {
 
   getAll: () => request<any[]>("/calculation-history"),
 
-  getByBatch: (batchId: string) =>
-    request<any[]>(`/calculation-history/batch/${batchId}`),
+  getByDailyLog: (dailyLogId: string) =>
+    request<any[]>(`/calculation-history/daily/${dailyLogId}`),
 
   getById: (id: string) => request<any>(`/calculation-history/${id}`),
+
+  markAsPaid: (id: string) =>
+    request<any>(`/calculation-history/${id}/paid`, {
+      method: "PUT",
+    }),
 
   delete: (id: string) =>
     request<any>(`/calculation-history/${id}`, {
       method: "DELETE",
     }),
 };
-
 // Cập nhật object api
 export const api = {
-  batches: batchesApi,
+  dailyLogs: dailyLogsApi,
   owners: ownersApi,
   animalTypes: animalTypesApi,
   calculationHistory: calculationHistoryApi,

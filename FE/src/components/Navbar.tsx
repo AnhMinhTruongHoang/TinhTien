@@ -23,7 +23,7 @@ const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const menuItems = [
-    { label: "Bảng diều Khiển", path: "/" },
+    { label: "BẢNG ĐIỀU KHIỂN ", path: "/" },
     { label: "Lô Động Vật", path: "/batches" },
     { label: "Chủ Động Vật", path: "/owners" },
     { label: "Loại Động Vật", path: "/animal-types" },

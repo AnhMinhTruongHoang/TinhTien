@@ -44,77 +44,68 @@ declare namespace AnimalTypes {
 
 // ============ BATCHES ============
 declare namespace Batches {
+  interface DailySlaughter {
+    day: number;
+    quantity: number;
+  }
+
   interface Batch {
     _id: string;
     owner: Owners.Owner | string;
     animalType: AnimalTypes.AnimalType | string;
+    month: string; // "YYYY-MM"
+    dailySlaughters: DailySlaughter[];
+    totalQuantity: number;
     originAddress?: string;
     destinationAddress?: string;
-    quantity: number;
-    quantityNotSlaughtered: number;
-    recordDate: Date;
     notes?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
   }
 
   interface CreateBatchDto {
     ownerId: string;
     animalTypeId: string;
+    month: string;
+    dailySlaughters: DailySlaughter[];
     originAddress?: string;
     destinationAddress?: string;
-    quantity: number;
-    quantityNotSlaughtered?: number;
-    recordDate?: string;
     notes?: string;
   }
 
-  interface HistoryItem {
-    _id: string;
-    batch: string | Batches.Batch;
-    pricePerUnit: number;
-    slaughterPricePerUnit: number;
-    transportCost: number;
-    quantity: number;
-    quantityNotSlaughtered: number;
-    slaughterQuantity: number;
-    animalCost: number;
-    slaughterCost: number;
-    totalCost: number;
-    costPerUnit: number;
-    calculatedAt: string;
-    createdAt?: string;
-    updatedAt?: string;
-  }
-
   interface UpdateBatchDto {
-    owner?: string;
-    animalType?: string;
+    ownerId?: string;
+    animalTypeId?: string;
+    month?: string;
+    dailySlaughters?: DailySlaughter[];
     originAddress?: string;
     destinationAddress?: string;
-    quantity?: number;
-    quantityNotSlaughtered?: number;
-    recordDate?: Date;
     notes?: string;
   }
 
   interface CalculateCostDto {
     batchId: string;
     pricePerUnit: number;
-    slaughterPricePerUnit?: number;
-    transportCost?: number;
   }
 
   interface CostResult {
     batchId: string;
-    quantity: number;
-    quantityNotSlaughtered: number;
-    slaughterQuantity: number;
-    animalCost: number;
-    slaughterCost: number;
-    transportCost: number;
+    month: string;
+    totalQuantity: number;
+    pricePerUnit: number;
     totalCost: number;
-    costPerUnit: number;
+    dailySlaughters: DailySlaughter[];
+  }
+
+  interface HistoryItem {
+    _id: string;
+    batch: string | Batch;
+    month: string;
+    pricePerUnit: number;
+    totalQuantity: number;
+    totalCost: number;
+    dailySlaughtersSnapshot: DailySlaughter[];
+    calculatedAt: string;
   }
 }
 

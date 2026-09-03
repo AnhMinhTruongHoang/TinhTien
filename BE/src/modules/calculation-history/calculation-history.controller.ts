@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Delete,
+  Put,
+} from '@nestjs/common';
 import { CalculationHistoryService } from './calculation-history.service';
 import { CreateCalculationHistoryDto } from './dto/create-calculation-history.dto';
 
@@ -16,9 +24,15 @@ export class CalculationHistoryController {
     return this.service.findAll();
   }
 
-  @Get('batch/:batchId')
-  findByBatch(@Param('batchId') batchId: string) {
-    return this.service.findByBatch(batchId);
+  // Chuẩn hóa: dùng dailyLog thay vì batch
+  @Get('daily/:dailyLogId')
+  findByDailyLog(@Param('dailyLogId') dailyLogId: string) {
+    return this.service.findByDailyLog(dailyLogId);
+  }
+
+  @Get('month/:month')
+  findByMonth(@Param('month') month: string) {
+    return this.service.findByMonth(month);
   }
 
   @Get(':id')
@@ -29,5 +43,10 @@ export class CalculationHistoryController {
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.service.delete(id);
+  }
+
+  @Put(':id/paid')
+  markAsPaid(@Param('id') id: string) {
+    return this.service.markAsPaid(id);
   }
 }

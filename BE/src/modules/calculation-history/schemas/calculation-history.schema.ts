@@ -1,58 +1,58 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { Batch } from 'src/modules/batch/schemas/batch.schemas';
 
 export type CalculationHistoryDocument = CalculationHistory & Document;
 
 @Schema({ timestamps: true })
 export class CalculationHistory {
-  @Prop({ type: Types.ObjectId, ref: 'Batch', required: true, index: true })
-  batch: Types.ObjectId | Batch;
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'DailyLog',
+    required: true,
+    index: true,
+  })
+  dailyLog: Types.ObjectId;
 
-  // Input người dùng nhập
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'Owner',
+    required: true,
+  })
+  owner: Types.ObjectId;
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'AnimalType',
+    required: true,
+  })
+  animalType: Types.ObjectId;
+
   @Prop({ required: true })
-  pricePerUnit: number;
+  date: Date;
 
-  @Prop({ default: 0 })
-  slaughterPricePerUnit: number;
-
-  @Prop({ default: 0 })
-  transportCost: number;
-
-  // Snapshot dữ liệu batch tại thời điểm tính (tránh batch bị sửa sau này làm sai lịch sử)
   @Prop({ required: true })
   quantity: number;
 
-  @Prop({ default: 0 })
-  quantityNotSlaughtered: number;
-
   @Prop({ required: true })
-  slaughterQuantity: number;
-
-  // Kết quả tính toán
-  @Prop({ required: true })
-  animalCost: number;
-
-  @Prop({ required: true })
-  slaughterCost: number;
+  pricePerUnit: number;
 
   @Prop({ required: true })
   totalCost: number;
 
-  @Prop({ required: true })
-  costPerUnit: number;
-
-  // Thời gian tính (có thể dùng timestamps.createdAt, nhưng giữ thêm cho rõ)
   @Prop({ default: Date.now })
   calculatedAt: Date;
 
-  // Nếu sau này có User thì thêm field này
-  // @Prop({ type: Types.ObjectId, ref: 'User' })
-  // calculatedBy?: Types.ObjectId;
+  // ================= PAYMENT =================
+
+  @Prop({ default: false, index: true })
+  isPaid: boolean;
+
+  @Prop()
+  paidAt?: Date;
 }
 
 export const CalculationHistorySchema =
   SchemaFactory.createForClass(CalculationHistory);
 
-// Index để query nhanh theo batch
-CalculationHistorySchema.index({ batch: 1, calculatedAt: -1 });
+CalculationHistorySchema.index({ dailyLog: 1, calculatedAt: -1 });
+CalculationHistorySchema.index({ owner: 1, animalType: 1, date: -1 });
