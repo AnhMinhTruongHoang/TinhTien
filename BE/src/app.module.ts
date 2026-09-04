@@ -6,6 +6,7 @@ import { OwnerModule } from './modules/owners/owners.module';
 import { AnimalTypeModule } from './modules/animal-types/animal-types.module';
 import { CalculationHistoryModule } from './modules/calculation-history/calculation-history.module';
 import { DailyLogsModule } from './modules/daily-logs/daily-logs.module';
+import { BackupModule } from './modules/backup/backup.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { DailyLogsModule } from './modules/daily-logs/daily-logs.module';
     AnimalTypeModule,
     CalculationHistoryModule,
     DailyLogsModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [AppService],

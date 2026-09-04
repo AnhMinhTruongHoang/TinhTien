@@ -16,6 +16,8 @@ import {
 
 import { api } from "@/utils/api";
 
+import { toast } from "react-toastify";
+
 interface OwnerOption {
   _id: string;
   name: string;
@@ -131,7 +133,9 @@ const DailyLogFormDialog = ({
       !formData.date ||
       formData.quantity <= 0
     ) {
-      alert("Vui lòng nhập đầy đủ Chủ, Loại động vật, Ngày và Số lượng");
+      toast.warning(
+        "Vui lòng nhập đầy đủ Chủ, Loại động vật, Ngày và Số lượng"
+      );
 
       return;
     }
@@ -153,8 +157,12 @@ const DailyLogFormDialog = ({
 
       if (dailyLog?._id) {
         await api.dailyLogs.update(dailyLog._id, data);
+
+        toast.success("Cập nhật nhật ký thành công");
       } else {
         await api.dailyLogs.create(data);
+
+        toast.success("Thêm nhật ký thành công");
       }
 
       await onSaved?.();
@@ -163,7 +171,9 @@ const DailyLogFormDialog = ({
     } catch (error) {
       console.error("Lưu daily log thất bại:", error);
 
-      alert("Lưu thất bại");
+      toast.error(
+        error instanceof Error ? error.message : "Lưu nhật ký thất bại"
+      );
     } finally {
       setSaving(false);
     }

@@ -189,7 +189,11 @@ export class DailyLogsService {
   // MONTH SUMMARY
   // =====================================================
 
-  async getMonthSummary(ownerId: string, animalTypeId: string, month: string) {
+  async getMonthSummary(
+    ownerId: string,
+    animalTypeId: string,
+    month: string,
+  ): Promise<any> {
     const [year, mon] = month.split('-').map(Number);
 
     const start = new Date(year, mon - 1, 1);
@@ -197,15 +201,13 @@ export class DailyLogsService {
     const end = new Date(year, mon, 0, 23, 59, 59, 999);
 
     // =====================================================
-    // DAILY LOGS
+    // DAILY LOGS TRONG THÁNG
     // =====================================================
 
     const logs = await this.dailyLogModel
       .find({
         owner: ownerId,
-
         animalType: animalTypeId,
-
         date: {
           $gte: start,
           $lte: end,
@@ -215,47 +217,83 @@ export class DailyLogsService {
       .sort({
         date: -1,
       })
+      .lean()
       .exec();
 
-    // Tổng số con trong tháng
     const totalQuantity = logs.reduce(
       (sum, item) => sum + Number(item.quantity || 0),
       0,
     );
 
+    if (logs.length === 0) {
+      return {
+        month,
+        totalQuantity: 0,
+        totalDays: 0,
+        totalCost: 0,
+        totalPaid: 0,
+        totalUnpaid: 0,
+        calculatedDays: 0,
+        uncalculatedDays: 0,
+        paidDays: 0,
+        unpaidDays: 0,
+        logs: [],
+      };
+    }
+
     // =====================================================
-    // CALCULATION HISTORY
+    // DAILY LOG IDS
     // =====================================================
 
-    const dailyLogIds = logs.map((log) => log._id);
+    const validDailyLogIds = new Set(logs.map((log) => log._id.toString()));
 
-    const histories = await this.historyModel
-      .find({
-        dailyLog: {
-          $in: dailyLogIds,
-        },
-      })
+    // =====================================================
+    // HISTORIES
+    //
+    // Không dùng:
+    // dailyLog: { $in: dailyLogIds }
+    //
+    // vì trước đó project đang có vấn đề match ở query này.
+    // =====================================================
+
+    const allHistories = await this.historyModel
+      .find()
       .sort({
         calculatedAt: -1,
+        createdAt: -1,
       })
+      .lean()
       .exec();
 
+    // Chỉ giữ history thuộc các DailyLog
+    // đang nằm trong tháng hiện tại
+    const histories = allHistories.filter((history: any) => {
+      if (!history.dailyLog) {
+        return false;
+      }
+
+      return validDailyLogIds.has(history.dailyLog.toString());
+    });
+
     // =====================================================
-    // LATEST HISTORY CỦA MỖI DAILY LOG
+    // LATEST CALCULATION CỦA MỖI DAILY LOG
     // =====================================================
 
-    const latestHistoryByDailyLog = new Map<
-      string,
-      CalculationHistoryDocument
-    >();
+    const latestHistoryByDailyLog = new Map<string, any>();
+
+    const paidHistoryByDailyLog = new Map<string, any>();
 
     for (const history of histories) {
       const dailyLogId = history.dailyLog.toString();
 
-      // histories đã sort DESC
-      // nên record đầu tiên là lần tính mới nhất
+      // histories đã sort mới nhất -> cũ
       if (!latestHistoryByDailyLog.has(dailyLogId)) {
         latestHistoryByDailyLog.set(dailyLogId, history);
+      }
+
+      // Lưu history đã thanh toán
+      if (history.isPaid === true && !paidHistoryByDailyLog.has(dailyLogId)) {
+        paidHistoryByDailyLog.set(dailyLogId, history);
       }
     }
 
@@ -276,21 +314,6 @@ export class DailyLogsService {
     // PAID
     // =====================================================
 
-    const paidHistoryByDailyLog = new Map<string, CalculationHistoryDocument>();
-
-    for (const history of histories) {
-      if (!history.isPaid) {
-        continue;
-      }
-
-      const dailyLogId = history.dailyLog.toString();
-
-      if (!paidHistoryByDailyLog.has(dailyLogId)) {
-        paidHistoryByDailyLog.set(dailyLogId, history);
-      }
-    }
-
-    // Tổng tiền đã nhận
     const totalPaid = Array.from(paidHistoryByDailyLog.values()).reduce(
       (sum, history) => sum + Number(history.totalCost || 0),
       0,
@@ -298,10 +321,8 @@ export class DailyLogsService {
 
     const paidDays = paidHistoryByDailyLog.size;
 
-    // Có tính giá nhưng chưa nhận tiền
-    const unpaidDays = calculatedDays - paidDays;
+    const unpaidDays = Math.max(calculatedDays - paidDays, 0);
 
-    // Tổng tiền chưa nhận
     const totalUnpaid = Math.max(totalCost - totalPaid, 0);
 
     // =====================================================
@@ -311,31 +332,22 @@ export class DailyLogsService {
     return {
       month,
 
-      // Tổng số con
       totalQuantity,
 
-      // Tổng số ngày có log
       totalDays: logs.length,
 
-      // Tổng tiền đã tính
       totalCost,
 
-      // Tổng tiền đã nhận
       totalPaid,
 
-      // Tổng tiền chưa nhận
       totalUnpaid,
 
-      // Số ngày đã tính giá
       calculatedDays,
 
-      // Số ngày chưa tính giá
       uncalculatedDays,
 
-      // Số ngày đã nhận tiền
       paidDays,
 
-      // Số ngày tính rồi nhưng chưa nhận tiền
       unpaidDays,
 
       logs,

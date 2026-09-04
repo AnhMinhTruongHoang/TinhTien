@@ -15,6 +15,8 @@ import {
 
 import { api } from "@/utils/api";
 
+import { toast } from "react-toastify";
+
 interface CalculateCostDialogProps {
   open: boolean;
   onClose: () => void;
@@ -44,12 +46,14 @@ const CalculateCostDialog = ({
 
   const handleCalculateCost = async () => {
     if (!dailyLogId) {
-      alert("Không tìm thấy Daily Log");
+      toast.error("Không tìm thấy Daily Log");
+
       return;
     }
 
     if (pricePerUnit <= 0) {
-      alert("Đơn giá phải lớn hơn 0");
+      toast.warning("Đơn giá phải lớn hơn 0");
+
       return;
     }
 
@@ -64,19 +68,12 @@ const CalculateCostDialog = ({
       setCostResult(result);
 
       await onCalculated?.(result);
-    }  catch (error) {
-      console.error(
-        "Không thể tính chi phí:",
-        error
-      );
-    
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Không thể tính chi phí"
-      );
-    } finally {
-      setLoading(false);
+
+      toast.success("Tính chi phí thành công");
+    } catch (error) {
+      console.error("Không thể tính chi phí:", error);
+
+      alert(error instanceof Error ? error.message : "Không thể tính chi phí");
     }
   };
 

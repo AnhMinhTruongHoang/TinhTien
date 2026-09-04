@@ -24,6 +24,7 @@ import {
 } from "@mui/icons-material";
 
 import { api } from "@/utils/api";
+import BackupManager from "@/components/BackupManager";
 
 interface DashboardStats {
   totalDailyLogs: number;
@@ -642,11 +643,9 @@ const Dashboard = () => {
         <Box
           sx={{
             display: "flex",
-
             alignItems: "center",
-
+            justifyContent: "center",
             gap: 1,
-
             mb: 2,
           }}
         >
@@ -656,6 +655,7 @@ const Dashboard = () => {
             variant="h6"
             sx={{
               fontWeight: 700,
+              textAlign: "center",
             }}
           >
             Tháng {dayjs().format("MM/YYYY")}
@@ -846,6 +846,11 @@ const Dashboard = () => {
           </Box>
         )}
       </Paper>
+
+      {/* BACKUP */}
+      <Box sx={{ mt: 3 }}>
+        <BackupManager />
+      </Box>
     </Box>
   );
 };

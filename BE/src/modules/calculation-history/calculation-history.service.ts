@@ -119,6 +119,124 @@ export class CalculationHistoryService {
       .exec();
   }
 
+  ///take all
+  async markMonthAsPaid(ownerId: string, animalTypeId: string, month: string) {
+    const [year, mon] = month.split('-').map(Number);
+
+    const start = new Date(year, mon - 1, 1);
+
+    const end = new Date(year, mon, 0, 23, 59, 59, 999);
+
+    // =====================================================
+    // LẤY TOÀN BỘ HISTORY CỦA CHỦ + LOẠI + THÁNG
+    // =====================================================
+
+    const histories = await this.historyModel
+      .find({
+        owner: ownerId,
+        animalType: animalTypeId,
+        date: {
+          $gte: start,
+          $lte: end,
+        },
+      })
+      .sort({
+        calculatedAt: -1,
+        createdAt: -1,
+      })
+      .lean()
+      .exec();
+
+    if (histories.length === 0) {
+      return {
+        updatedCount: 0,
+        totalPaidAmount: 0,
+        message: 'Không có ngày nào đã tính chi phí trong tháng này',
+      };
+    }
+
+    // =====================================================
+    // GROUP THEO DAILY LOG
+    // =====================================================
+
+    const latestHistoryMap = new Map<string, any>();
+
+    const paidDailyLogs = new Set<string>();
+
+    for (const history of histories) {
+      if (!history.dailyLog) {
+        continue;
+      }
+
+      const dailyLogId = history.dailyLog.toString();
+
+      // Nếu bất kỳ history nào đã paid
+      // thì DailyLog đó xem như đã nhận tiền
+      if (history.isPaid === true) {
+        paidDailyLogs.add(dailyLogId);
+      }
+
+      // histories đã sort mới nhất trước
+      if (!latestHistoryMap.has(dailyLogId)) {
+        latestHistoryMap.set(dailyLogId, history);
+      }
+    }
+
+    // =====================================================
+    // CHỈ LẤY NHỮNG DAILY LOG CHƯA PAID
+    // =====================================================
+
+    const unpaidLatestHistories = Array.from(latestHistoryMap.entries())
+      .filter(([dailyLogId]) => !paidDailyLogs.has(dailyLogId))
+      .map(([, history]) => history);
+
+    if (unpaidLatestHistories.length === 0) {
+      return {
+        updatedCount: 0,
+        totalPaidAmount: 0,
+        message: 'Tất cả ngày đã tính đều đã nhận tiền',
+      };
+    }
+
+    const historyIds = unpaidLatestHistories.map((history) => history._id);
+
+    const paidAt = new Date();
+
+    // =====================================================
+    // UPDATE BULK
+    // =====================================================
+
+    const result = await this.historyModel.updateMany(
+      {
+        _id: {
+          $in: historyIds,
+        },
+      },
+      {
+        $set: {
+          isPaid: true,
+          paidAt,
+        },
+      },
+    );
+
+    const totalPaidAmount = unpaidLatestHistories.reduce(
+      (sum, history) => sum + Number(history.totalCost || 0),
+      0,
+    );
+
+    return {
+      updatedCount: result.modifiedCount,
+
+      totalPaidAmount,
+
+      paidAt,
+
+      message: `Đã xác nhận nhận tiền ${result.modifiedCount} ngày`,
+    };
+  }
+  ///
+
   async markAsPaid(id: string) {
     const history = await this.historyModel.findById(id);
 

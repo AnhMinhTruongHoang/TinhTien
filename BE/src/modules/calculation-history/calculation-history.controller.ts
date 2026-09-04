@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { CalculationHistoryService } from './calculation-history.service';
 import { CreateCalculationHistoryDto } from './dto/create-calculation-history.dto';
+import { MarkMonthPaidDto } from './dto/mark-month-paid.dto';
 
 @Controller('calculation-history')
 export class CalculationHistoryController {
@@ -43,6 +44,15 @@ export class CalculationHistoryController {
   @Delete(':id')
   delete(@Param('id') id: string) {
     return this.service.delete(id);
+  }
+
+  @Put('month/paid')
+  markMonthAsPaid(@Body() dto: MarkMonthPaidDto) {
+    return this.service.markMonthAsPaid(
+      dto.ownerId,
+      dto.animalTypeId,
+      dto.month,
+    );
   }
 
   @Put(':id/paid')

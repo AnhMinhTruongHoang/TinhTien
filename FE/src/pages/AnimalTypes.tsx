@@ -113,32 +113,139 @@ const AnimalTypes = () => {
       </Box>
 
       {isMobile ? (
-        // Mobile: Card View
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        // =====================================================
+        // MOBILE: CARD VIEW
+        // =====================================================
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
           {animalTypes.map((type) => (
-            <Card key={type._id}>
+            <Card
+              key={type._id}
+              sx={(theme) => ({
+                borderRadius: 2.5,
+                border: "1px solid",
+                borderColor: "divider",
+                backgroundColor: "background.paper",
+
+                boxShadow: theme.palette.mode === "dark" ? "none" : 2,
+
+                transition: "all 0.2s ease",
+
+                "&:hover": {
+                  transform: "translateY(-2px)",
+
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 6px 20px rgba(0,0,0,0.25)"
+                      : 3,
+
+                  borderColor: "primary.main",
+                },
+              })}
+            >
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 1, fontWeight: "bold" }}>
+                {/* NAME */}
+
+                <Typography
+                  variant="h6"
+                  sx={{
+                    mb: 1.5,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    color: "text.primary",
+                  }}
+                >
                   {type.name}
                 </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  <strong>Đơn Vị:</strong> {type.unit || "-"}
+
+                {/* UNIT */}
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mb: 1.25,
+                    color: "text.secondary",
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      fontWeight: 700,
+                      color: "text.primary",
+                    }}
+                  >
+                    Đơn Vị:
+                  </Box>{" "}
+                  <Box
+                    component="span"
+                    sx={{
+                      color: "primary.main",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {type.unit || "-"}
+                  </Box>
                 </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  <strong>Mô Tả:</strong> {type.description || "-"}
+
+                {/* DESCRIPTION */}
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mb: 2,
+                    color: "text.secondary",
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      fontWeight: 700,
+                      color: "text.primary",
+                    }}
+                  >
+                    Mô Tả:
+                  </Box>{" "}
+                  {type.description || "-"}
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1 }}>
+
+                {/* ACTIONS */}
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    pt: 1.5,
+
+                    borderTop: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
                   <IconButton
                     size="small"
+                    color="primary"
                     onClick={() => handleOpen(type)}
-                    sx={{ flex: 1 }}
+                    sx={{
+                      flex: 1,
+                      borderRadius: 2,
+                    }}
                   >
                     <Edit fontSize="small" />
                   </IconButton>
+
                   <IconButton
                     size="small"
+                    color="error"
                     onClick={() => handleDelete(type._id)}
-                    sx={{ flex: 1 }}
+                    sx={{
+                      flex: 1,
+                      borderRadius: 2,
+                    }}
                   >
                     <Delete fontSize="small" />
                   </IconButton>
@@ -148,37 +255,133 @@ const AnimalTypes = () => {
           ))}
         </Box>
       ) : (
-        // Desktop: Table View
-        <TableContainer component={Paper}>
+        // =====================================================
+        // DESKTOP: TABLE VIEW
+        // =====================================================
+
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 2.5,
+            overflow: "hidden",
+
+            border: "1px solid",
+            borderColor: "divider",
+
+            backgroundColor: "background.paper",
+
+            boxShadow: 1,
+          }}
+        >
           <Table>
+            {/* ================= HEADER ================= */}
+
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                <TableCell>
-                  <strong>Tên Loại</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Đơn Vị</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Mô Tả</strong>
-                </TableCell>
-                <TableCell align="center">
-                  <strong>Hành Động</strong>
-                </TableCell>
+              <TableRow
+                sx={(theme) => ({
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#1e293b" : "#f5f7fa",
+
+                  "& .MuiTableCell-head": {
+                    color:
+                      theme.palette.mode === "dark"
+                        ? "#f8fafc"
+                        : "text.primary",
+
+                    fontWeight: 700,
+
+                    borderBottom: "1px solid",
+
+                    borderColor: "divider",
+                  },
+                })}
+              >
+                <TableCell>Tên Loại</TableCell>
+
+                <TableCell>Đơn Vị</TableCell>
+
+                <TableCell>Mô Tả</TableCell>
+
+                <TableCell align="center">Hành Động</TableCell>
               </TableRow>
             </TableHead>
+
+            {/* ================= BODY ================= */}
+
             <TableBody>
               {animalTypes.map((type) => (
-                <TableRow key={type._id}>
-                  <TableCell>{type.name}</TableCell>
-                  <TableCell>{type.unit || "-"}</TableCell>
-                  <TableCell>{type.description || "-"}</TableCell>
+                <TableRow
+                  key={type._id}
+                  hover
+                  sx={{
+                    transition: "background-color 0.15s ease",
+
+                    "&:last-child td": {
+                      borderBottom: 0,
+                    },
+                  }}
+                >
+                  {/* NAME */}
+
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "text.primary",
+                      }}
+                    >
+                      {type.name}
+                    </Typography>
+                  </TableCell>
+
+                  {/* UNIT */}
+
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: type.unit ? "primary.main" : "text.secondary",
+
+                        fontWeight: type.unit ? 600 : 400,
+                      }}
+                    >
+                      {type.unit || "-"}
+                    </Typography>
+                  </TableCell>
+
+                  {/* DESCRIPTION */}
+
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: type.description
+                          ? "text.primary"
+                          : "text.secondary",
+                      }}
+                    >
+                      {type.description || "-"}
+                    </Typography>
+                  </TableCell>
+
+                  {/* ACTIONS */}
+
                   <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleOpen(type)}>
-                      <Edit fontSize="small" />
-                    </IconButton>
                     <IconButton
                       size="small"
+                      color="primary"
+                      onClick={() => handleOpen(type)}
+                      sx={{
+                        mr: 0.5,
+                      }}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      color="error"
                       onClick={() => handleDelete(type._id)}
                     >
                       <Delete fontSize="small" />

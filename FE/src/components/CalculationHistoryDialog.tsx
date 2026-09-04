@@ -16,6 +16,7 @@ import {
 
 import { Delete } from "@mui/icons-material";
 import { api } from "@/utils/api";
+import { toast } from "react-toastify";
 
 interface CalculationHistoryDialogProps {
   open: boolean;
@@ -42,8 +43,8 @@ const CalculationHistoryDialog = ({
       setCostHistory(data);
     } catch (error) {
       console.error("Không thể tải lịch sử:", error);
-    } finally {
-      setLoadingHistory(false);
+
+      toast.error("Không thể tải lịch sử tính chi phí");
     }
   };
 
@@ -126,10 +127,15 @@ const CalculationHistoryDialog = ({
     try {
       await api.calculationHistory.delete(id);
 
+      toast.success("Xóa lịch sử tính chi phí thành công");
+
       await fetchCostHistory();
     } catch (error) {
       console.error("Không thể xóa lịch sử:", error);
-      alert("Xóa lịch sử thất bại");
+
+      toast.error(
+        error instanceof Error ? error.message : "Xóa lịch sử thất bại"
+      );
     }
   };
 
@@ -324,14 +330,39 @@ const CalculationHistoryDialog = ({
                           {new Date(item.calculatedAt).toLocaleString("vi-VN")}
                         </Typography>
                       </Box>
-
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteHistory(item._id)}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
                       >
-                        <Delete fontSize="small" />
-                      </IconButton>
+                        {/* TRẠNG THÁI THANH TOÁN */}
+
+                        {item.isPaid && (
+                          <Typography
+                            variant="caption"
+                            color="success.main"
+                            sx={{
+                              fontWeight: 700,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            ✓ Đã nhận tiền
+                          </Typography>
+                        )}
+
+                        {/* XÓA HISTORY */}
+
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={item.isPaid === true}
+                          onClick={() => handleDeleteHistory(item._id)}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Box>
                     </Box>
 
                     {/* STATUS */}

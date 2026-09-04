@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import * as XLSX from "xlsx";
 
 import {
   Box,
@@ -29,10 +30,9 @@ import {
   Add,
   Calculate,
   FilterAlt,
-  RestartAlt,
   History,
 } from "@mui/icons-material";
-
+import { toast } from "react-toastify";
 import { api } from "@/utils/api";
 
 import CalculationHistoryDialog from "@/components/CalculationHistoryDialog";
@@ -72,6 +72,8 @@ const Batches = () => {
 
   const [costHistoryOpen, setCostHistoryOpen] = useState(false);
 
+  const [payingMonth, setPayingMonth] = useState(false);
+
   // ================= FILTER =================
 
   const [searchText, setSearchText] = useState("");
@@ -107,29 +109,11 @@ const Batches = () => {
 
       const data = await api.dailyLogs.getAll();
 
-      console.table(
-        data.map((log: any) => ({
-          id: log._id,
-          date: log.date,
-          quantity: log.quantity,
-          animalType:
-            typeof log.animalType === "string"
-              ? log.animalType
-              : log.animalType?.name,
-
-          calculationId: log.latestCalculation?._id || null,
-
-          pricePerUnit: log.latestCalculation?.pricePerUnit ?? null,
-
-          totalCost: log.latestCalculation?.totalCost ?? null,
-
-          isPaid: log.latestCalculation?.isPaid ?? null,
-        }))
-      );
-
       setDailyLogs(data);
     } catch (error) {
       console.error("Không thể tải daily logs:", error);
+
+      toast.error("Không thể tải danh sách nhật ký");
     } finally {
       setLoading(false);
     }
@@ -248,6 +232,7 @@ const Batches = () => {
 
   const handleMonthSummary = async () => {
     if (!filterOwner || !filterAnimalType) {
+      toast.warning("Vui lòng chọn chủ và loại động vật");
       return;
     }
 
@@ -263,10 +248,14 @@ const Batches = () => {
       );
 
       setMonthSummary(result);
+
+      toast.success("Tổng hợp tháng thành công");
     } catch (error) {
       console.error("Không thể tổng hợp tháng:", error);
 
-      alert("Không thể tổng hợp tháng");
+      toast.error(
+        error instanceof Error ? error.message : "Không thể tổng hợp tháng"
+      );
     } finally {
       setLoadingMonthSummary(false);
     }
@@ -288,44 +277,134 @@ const Batches = () => {
     setEditingDailyLog(null);
   };
 
+  /// xlxs
+  const handleExportExcel = () => {
+    if (filteredDailyLogs.length === 0) {
+      toast.warning("Không có dữ liệu để xuất");
+      return;
+    }
+
+    const exportData = filteredDailyLogs.map((log: any, index: number) => {
+      const calculation = log.latestCalculation;
+
+      const ownerName =
+        typeof log.owner === "string" ? log.owner : log.owner?.name || "";
+
+      const animalTypeName =
+        typeof log.animalType === "string"
+          ? log.animalType
+          : log.animalType?.name || "";
+
+      return {
+        STT: index + 1,
+
+        Ngày: dayjs(log.date).format("DD/MM/YYYY"),
+
+        "Chủ động vật": ownerName,
+
+        "Loại động vật": animalTypeName,
+
+        "Số con": Number(log.quantity || 0),
+
+        "Giá / Con": calculation ? Number(calculation.pricePerUnit || 0) : "",
+
+        "Tổng Tiền": calculation ? Number(calculation.totalCost || 0) : "",
+
+        "Thanh Toán": !calculation
+          ? "Chưa tính"
+          : calculation.isPaid
+          ? "Đã nhận tiền"
+          : "Chưa nhận tiền",
+
+        "Ngày Nhận Tiền": calculation?.paidAt
+          ? dayjs(calculation.paidAt).format("DD/MM/YYYY HH:mm")
+          : "",
+
+        "Ghi Chú": log.notes || "",
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Độ rộng các cột
+    worksheet["!cols"] = [
+      { wch: 6 }, // STT
+      { wch: 14 }, // Ngày
+      { wch: 22 }, // Chủ
+      { wch: 18 }, // Loại
+      { wch: 10 }, // Số con
+      { wch: 15 }, // Giá
+      { wch: 18 }, // Tổng
+      { wch: 20 }, // Thanh toán
+      { wch: 22 }, // Ngày nhận
+      { wch: 30 }, // Ghi chú
+    ];
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Logs");
+
+    const monthText = filterMonth
+      ? filterMonth.format("YYYY-MM")
+      : dayjs().format("YYYY-MM");
+
+    XLSX.writeFile(workbook, `NhatKyGietMo_${monthText}.xlsx`);
+
+    toast.success("Tải file Excel thành công");
+  };
+
+  ///
+
   // =====================================================
   // DELETE DAILY LOG
   // =====================================================
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa ngày này?")) {
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa ngày này?");
+
+    if (!confirmed) {
       return;
     }
 
     try {
       await api.dailyLogs.delete(id);
 
+      toast.success("Xóa nhật ký thành công");
+
       await fetchDailyLogs();
 
       if (selectedDailyLogId === id) {
         setSelectedDailyLogId(null);
       }
+
+      // Nếu đang mở tổng tháng
+      // thì cập nhật lại luôn
+      if (monthSummary && filterOwner && filterAnimalType) {
+        await handleMonthSummary();
+      }
     } catch (error) {
       console.error("Xóa daily log thất bại:", error);
 
-      alert("Xóa thất bại");
+      toast.error(
+        error instanceof Error ? error.message : "Xóa nhật ký thất bại"
+      );
     }
   };
-
   ///
   const handleMarkAsPaid = async (dailyLog: any) => {
     const calculation = dailyLog.latestCalculation;
 
     if (!calculation?._id) {
-      alert("Daily Log này chưa được tính chi phí");
+      toast.warning("Daily Log này chưa được tính chi phí");
       return;
     }
 
     if (calculation.isPaid) {
+      toast.info("Daily Log này đã nhận tiền");
       return;
     }
 
-    const confirmed = confirm(
+    const confirmed = window.confirm(
       `Xác nhận đã nhận ${Number(calculation.totalCost || 0).toLocaleString(
         "vi-VN"
       )}đ?`
@@ -338,7 +417,6 @@ const Batches = () => {
     try {
       const result = await api.calculationHistory.markAsPaid(calculation._id);
 
-      // Update UI ngay
       setDailyLogs((prev) =>
         prev.map((log) =>
           log._id === dailyLog._id
@@ -357,15 +435,76 @@ const Batches = () => {
         )
       );
 
-      // Nếu đang hiển thị tổng tháng
-      // thì tính lại totalPaid
+      toast.success("Đã xác nhận nhận tiền");
+
       if (monthSummary && filterOwner && filterAnimalType) {
         await handleMonthSummary();
       }
     } catch (error) {
       console.error("Xác nhận thanh toán thất bại:", error);
 
-      alert("Không thể xác nhận thanh toán");
+      toast.error(
+        error instanceof Error ? error.message : "Không thể xác nhận thanh toán"
+      );
+    }
+  };
+  /// take month
+
+  const handleMarkMonthAsPaid = async () => {
+    if (!filterOwner || !filterAnimalType || !filterMonth) {
+      toast.warning("Vui lòng chọn chủ, loại động vật và tháng");
+      return;
+    }
+
+    if (!monthSummary || Number(monthSummary.unpaidDays || 0) <= 0) {
+      toast.info("Không có ngày nào cần xác nhận thanh toán");
+
+      return;
+    }
+
+    const unpaidDays = Number(monthSummary.unpaidDays || 0);
+
+    const totalUnpaid = Number(monthSummary.totalUnpaid || 0);
+
+    const confirmed = window.confirm(
+      `Xác nhận đã nhận tiền cho ${unpaidDays} ngày chưa thanh toán?\n\n` +
+        `Tổng số tiền: ${totalUnpaid.toLocaleString("vi-VN")}đ`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setPayingMonth(true);
+
+      const result = await api.calculationHistory.markMonthAsPaid({
+        ownerId: filterOwner,
+
+        animalTypeId: filterAnimalType,
+
+        month: filterMonth.format("YYYY-MM"),
+      });
+
+      toast.success(
+        result.message || `Đã xác nhận ${result.updatedCount} ngày`
+      );
+
+      // Refresh table
+      await fetchDailyLogs();
+
+      // Refresh tổng tháng
+      await handleMonthSummary();
+    } catch (error) {
+      console.error("Không thể xác nhận thanh toán tháng:", error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể xác nhận thanh toán tháng"
+      );
+    } finally {
+      setPayingMonth(false);
     }
   };
   ///
@@ -587,51 +726,102 @@ const Batches = () => {
           />
         </Box>
 
-        {/* ================= FILTER ACTIONS ================= */}
+        {/* ================= FILTER ACTIONS + COUNT ================= */}
 
         <Box
           sx={{
+            mt: 2,
             display: "flex",
-
-            flexDirection: isMobile ? "column" : "row",
-
+            flexDirection: {
+              xs: "column",
+              md: "row",
+            },
+            alignItems: {
+              xs: "stretch",
+              md: "center",
+            },
+            justifyContent: "space-between",
             gap: 1.5,
-
-            mt: 2,
-
-            justifyContent: "flex-end",
           }}
         >
-          <Button
-            variant="outlined"
-            startIcon={<RestartAlt />}
-            onClick={handleResetFilter}
-            fullWidth={isMobile}
-          >
-            Xóa lọc
-          </Button>
+          {/* COUNT */}
 
-          <Button
-            variant="contained"
-            onClick={handleMonthSummary}
-            disabled={!filterOwner || !filterAnimalType || loadingMonthSummary}
-            fullWidth={isMobile}
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              textAlign: {
+                xs: "center",
+                md: "left",
+              },
+              order: {
+                xs: 2,
+                md: 1,
+              },
+            }}
           >
-            {loadingMonthSummary ? "Đang tính..." : "Tổng tháng"}
-          </Button>
+            Đang hiển thị{" "}
+            <Box
+              component="span"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+              }}
+            >
+              {filteredDailyLogs.length}
+            </Box>{" "}
+            / {dailyLogs.length} ngày
+          </Typography>
+
+          {/* ACTIONS */}
+
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              flexDirection: {
+                xs: "column",
+                sm: "row",
+              },
+              justifyContent: {
+                xs: "stretch",
+                md: "flex-end",
+              },
+              order: {
+                xs: 1,
+                md: 2,
+              },
+            }}
+          >
+            <Button
+              variant="contained"
+              onClick={handleMonthSummary}
+              disabled={!filterOwner || !filterAnimalType}
+              sx={{
+                minWidth: {
+                  sm: 145,
+                },
+              }}
+            >
+              TỔNG THÁNG
+            </Button>
+
+            <Button
+              variant="outlined"
+              onClick={handleExportExcel}
+              disabled={filteredDailyLogs.length === 0}
+              sx={{
+                minWidth: {
+                  sm: 135,
+                  color: "green",
+                  borderColor: "green",
+                },
+              }}
+            >
+              TẢI EXCEL
+            </Button>
+          </Box>
         </Box>
-
-        {/* ================= COUNT ================= */}
-
-        <Typography
-          variant="body2"
-          sx={{
-            mt: 2,
-            color: "text.secondary",
-          }}
-        >
-          Đang hiển thị {filteredDailyLogs.length} / {dailyLogs.length} ngày
-        </Typography>
 
         {/* =====================================================
             MONTH SUMMARY
@@ -639,38 +829,76 @@ const Batches = () => {
 
         {monthSummary && (
           <Box
-            sx={{
-              mt: 2,
-              p: 2,
+            sx={(theme) => ({
+              mt: 2.5,
 
-              borderRadius: 2,
+              p: {
+                xs: 2,
+                md: 2.5,
+              },
+
+              borderRadius: 2.5,
 
               border: "1px solid",
 
-              borderColor: "primary.light",
+              borderColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(144, 202, 249, 0.25)"
+                  : "primary.light",
 
-              backgroundColor: "#eef6ff",
-            }}
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(30, 41, 59, 0.55)"
+                  : "#eef6ff",
+            })}
           >
+            {/* ================= SUMMARY GRID ================= */}
+
             <Box
               sx={{
                 display: "grid",
-
-                gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)",
-
-                gap: 2,
+                gridTemplateColumns: {
+                  xs: "repeat(2, minmax(0, 1fr))",
+                  md: "repeat(3, minmax(0, 1fr))",
+                },
+                gap: {
+                  xs: 1.5,
+                  md: 2,
+                },
               }}
             >
               {/* THÁNG */}
 
-              <Box>
+              <Box
+                sx={(theme) => ({
+                  p: 1.5,
+
+                  textAlign: "center",
+
+                  borderRadius: 2,
+
+                  border: "1px solid",
+
+                  borderColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.07)"
+                      : "transparent",
+
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.7)"
+                      : "background.paper",
+                })}
+              >
                 <Typography variant="caption" color="text.secondary">
                   Tháng
                 </Typography>
 
                 <Typography
                   sx={{
+                    mt: 0.25,
                     fontWeight: 700,
+                    fontSize: 17,
                   }}
                 >
                   {dayjs(`${monthSummary.month}-01`).format("MM/YYYY")}
@@ -679,14 +907,36 @@ const Batches = () => {
 
               {/* TỔNG NGÀY */}
 
-              <Box>
+              <Box
+                sx={(theme) => ({
+                  p: 1.5,
+
+                  textAlign: "center",
+
+                  borderRadius: 2,
+
+                  border: "1px solid",
+
+                  borderColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.07)"
+                      : "transparent",
+
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.7)"
+                      : "background.paper",
+                })}
+              >
                 <Typography variant="caption" color="text.secondary">
                   Tổng số ngày có log
                 </Typography>
 
                 <Typography
                   sx={{
+                    mt: 0.25,
                     fontWeight: 700,
+                    fontSize: 17,
                   }}
                 >
                   {monthSummary.totalDays || 0} ngày
@@ -695,18 +945,37 @@ const Batches = () => {
 
               {/* TỔNG SỐ CON */}
 
-              <Box>
+              <Box
+                sx={(theme) => ({
+                  p: 1.5,
+
+                  textAlign: "center",
+
+                  borderRadius: 2,
+
+                  border: "1px solid",
+
+                  borderColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.07)"
+                      : "transparent",
+
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.7)"
+                      : "background.paper",
+                })}
+              >
                 <Typography variant="caption" color="text.secondary">
                   Tổng số con
                 </Typography>
 
                 <Typography
                   sx={{
+                    mt: 0.25,
                     fontWeight: 700,
-
                     color: "primary.main",
-
-                    fontSize: 18,
+                    fontSize: 17,
                   }}
                 >
                   {Number(monthSummary.totalQuantity || 0).toLocaleString(
@@ -718,13 +987,34 @@ const Batches = () => {
 
               {/* TỔNG TIỀN */}
 
-              <Box>
+              <Box
+                sx={(theme) => ({
+                  p: 1.5,
+
+                  textAlign: "center",
+
+                  borderRadius: 2,
+
+                  border: "1px solid",
+
+                  borderColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.07)"
+                      : "transparent",
+
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.7)"
+                      : "background.paper",
+                })}
+              >
                 <Typography variant="caption" color="text.secondary">
                   Tổng tiền
                 </Typography>
 
                 <Typography
                   sx={{
+                    mt: 0.25,
                     fontWeight: 700,
                     fontSize: 18,
                   }}
@@ -735,17 +1025,36 @@ const Batches = () => {
 
               {/* ĐÃ NHẬN */}
 
-              <Box>
+              <Box
+                sx={(theme) => ({
+                  p: 1.5,
+
+                  textAlign: "center",
+
+                  borderRadius: 2,
+
+                  border: "1px solid",
+
+                  borderColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.07)"
+                      : "transparent",
+
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.7)"
+                      : "background.paper",
+                })}
+              >
                 <Typography variant="caption" color="text.secondary">
                   Đã nhận
                 </Typography>
 
                 <Typography
                   sx={{
+                    mt: 0.25,
                     fontWeight: 700,
-
                     color: "success.main",
-
                     fontSize: 18,
                   }}
                 >
@@ -755,17 +1064,36 @@ const Batches = () => {
 
               {/* CHƯA NHẬN */}
 
-              <Box>
+              <Box
+                sx={(theme) => ({
+                  p: 1.5,
+
+                  textAlign: "center",
+
+                  borderRadius: 2,
+
+                  border: "1px solid",
+
+                  borderColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.07)"
+                      : "transparent",
+
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(15, 23, 42, 0.7)"
+                      : "background.paper",
+                })}
+              >
                 <Typography variant="caption" color="text.secondary">
                   Chưa nhận
                 </Typography>
 
                 <Typography
                   sx={{
+                    mt: 0.25,
                     fontWeight: 700,
-
                     color: "warning.main",
-
                     fontSize: 18,
                   }}
                 >
@@ -774,34 +1102,112 @@ const Batches = () => {
               </Box>
             </Box>
 
-            {/* ================= PAYMENT STATUS ================= */}
+            {/* ================= FOOTER ================= */}
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
+            <Box
               sx={{
                 mt: 2,
-                pt: 1.5,
-
+                pt: 2,
                 borderTop: "1px solid",
-
                 borderColor: "divider",
-              }}
-            >
-              Đã nhận tiền {monthSummary.paidDays || 0} /{" "}
-              {monthSummary.calculatedDays || 0} ngày đã tính
-            </Typography>
 
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                mt: 0.5,
+                display: "flex",
+
+                flexDirection: {
+                  xs: "column",
+                  md: "row",
+                },
+
+                alignItems: {
+                  xs: "stretch",
+                  md: "center",
+                },
+
+                justifyContent: "space-between",
+
+                gap: 2,
               }}
             >
-              Đã tính chi phí {monthSummary.calculatedDays || 0} /{" "}
-              {monthSummary.totalDays || 0} ngày
-            </Typography>
+              {/* STATUS */}
+
+              <Box
+                sx={{
+                  textAlign: {
+                    xs: "center",
+                    md: "left",
+                  },
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                    color: "text.primary",
+                  }}
+                >
+                  Đã nhận tiền {monthSummary.paidDays || 0} /{" "}
+                  {monthSummary.calculatedDays || 0} ngày đã tính
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mt: 0.5,
+                    color: "text.secondary",
+                  }}
+                >
+                  Đã tính chi phí {monthSummary.calculatedDays || 0} /{" "}
+                  {monthSummary.totalDays || 0} ngày
+                </Typography>
+              </Box>
+              {/* PAYMENT ACTION */}
+
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: {
+                    xs: "center",
+                    md: "flex-end",
+                  },
+                }}
+              >
+                {Number(monthSummary.unpaidDays || 0) > 0 ? (
+                  <Button
+                    variant="contained"
+                    color="success"
+                    disabled={payingMonth}
+                    onClick={handleMarkMonthAsPaid}
+                    sx={{
+                      minWidth: {
+                        xs: "100%",
+                        sm: 280,
+                      },
+                      minHeight: 42,
+                    }}
+                  >
+                    {payingMonth
+                      ? "ĐANG XÁC NHẬN..."
+                      : `XÁC NHẬN ĐÃ NHẬN TẤT CẢ (${monthSummary.unpaidDays} NGÀY)`}
+                  </Button>
+                ) : Number(monthSummary.calculatedDays || 0) > 0 ? (
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      borderRadius: 2,
+                      backgroundColor: "success.main",
+                      color: "success.contrastText",
+                      fontWeight: 700,
+                      fontSize: 14,
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    ✓ ĐÃ NHẬN TIỀN TẤT CẢ
+                  </Box>
+                ) : null}
+              </Box>
+            </Box>
           </Box>
         )}
       </Paper>
@@ -1045,51 +1451,67 @@ const Batches = () => {
             DESKTOP
         ===================================================== */
 
-        <TableContainer component={Paper}>
+        <TableContainer
+          component={Paper}
+          sx={(theme) => ({
+            p: 1.5,
+
+            textAlign: "center",
+
+            borderRadius: 2,
+
+            border: "1px solid",
+
+            borderColor:
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.07)"
+                : "transparent",
+
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "rgba(15, 23, 42, 0.7)"
+                : "background.paper",
+          })}
+        >
           <Table>
             {/* ================= TABLE HEAD ================= */}
 
             <TableHead>
               <TableRow
-                sx={{
-                  backgroundColor: "#f5f5f5",
-                }}
+                sx={(theme) => ({
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#1e293b" : "#f5f7fa",
+
+                  "& .MuiTableCell-head": {
+                    color:
+                      theme.palette.mode === "dark"
+                        ? "#f8fafc"
+                        : theme.palette.text.primary,
+
+                    fontWeight: 700,
+
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                  },
+                })}
               >
-                <TableCell>
-                  <strong>Ngày</strong>
-                </TableCell>
+                <TableCell>Ngày</TableCell>
 
-                <TableCell>
-                  <strong>Chủ Động Vật</strong>
-                </TableCell>
+                <TableCell>Chủ Động Vật</TableCell>
 
-                <TableCell>
-                  <strong>Loại Động Vật</strong>
-                </TableCell>
+                <TableCell>Loại Động Vật</TableCell>
 
-                <TableCell>
-                  <strong>Số Con</strong>
-                </TableCell>
+                <TableCell>Số Con</TableCell>
 
-                <TableCell>
-                  <strong>Giá / Con</strong>
-                </TableCell>
+                <TableCell>Giá / Con</TableCell>
 
-                <TableCell>
-                  <strong>Tổng Tiền</strong>
-                </TableCell>
+                <TableCell>Tổng Tiền</TableCell>
 
-                <TableCell>
-                  <strong>Ghi Chú</strong>
-                </TableCell>
+                <TableCell>Ghi Chú</TableCell>
 
-                <TableCell>
-                  <strong>Thanh Toán</strong>
-                </TableCell>
+                <TableCell>Thanh Toán</TableCell>
 
-                <TableCell align="center">
-                  <strong>Hành Động</strong>
-                </TableCell>
+                <TableCell align="center">Hành Động</TableCell>
               </TableRow>
             </TableHead>
 
@@ -1100,7 +1522,14 @@ const Batches = () => {
                 const calculation = dailyLog.latestCalculation;
 
                 return (
-                  <TableRow key={dailyLog._id}>
+                  <TableRow
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: "action.hover",
+                      },
+                    }}
+                    key={dailyLog._id}
+                  >
                     {/* DATE */}
 
                     <TableCell>

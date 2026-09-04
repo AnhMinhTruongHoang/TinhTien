@@ -173,49 +173,129 @@ const Owners = () => {
       />
 
       {isMobile ? (
-        // Mobile: Card View
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        // =====================================================
+        // MOBILE: CARD VIEW
+        // =====================================================
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
           {filteredOwners.map((owner) => (
-            <Card key={owner._id} sx={{ boxShadow: 3, borderRadius: 2 }}>
+            <Card
+              key={owner._id}
+              sx={(theme) => ({
+                borderRadius: 2.5,
+
+                boxShadow: theme.palette.mode === "dark" ? "none" : 2,
+
+                border: "1px solid",
+
+                borderColor: "divider",
+
+                backgroundColor: "background.paper",
+
+                transition: "all 0.2s ease",
+
+                "&:hover": {
+                  transform: "translateY(-2px)",
+
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 6px 20px rgba(0,0,0,0.25)"
+                      : 3,
+
+                  borderColor: "primary.main",
+                },
+              })}
+            >
               <CardContent>
+                {/* NAME */}
+
                 <Typography
                   variant="h6"
-                  sx={{ mb: 1, fontWeight: "bold", textAlign: "center" }}
+                  sx={{
+                    mb: 1.5,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    color: "text.primary",
+                  }}
                 >
                   {owner.name}
                 </Typography>
+
+                {/* CONTACT */}
+
                 <Typography
                   variant="body2"
-                  color="textSecondary"
-                  sx={{ mb: 1 }}
+                  color="text.secondary"
+                  sx={{
+                    mb: 1.25,
+                  }}
                 >
                   Liên Hệ:{" "}
-                  <span
-                    style={{
-                      color: "#1976d2",
-                      cursor: owner.contact ? "pointer" : "default",
-                      textDecoration: owner.contact ? "underline" : "none",
-                    }}
+                  <Box
+                    component="span"
                     onClick={() => handleCall(owner.contact)}
+                    sx={{
+                      color: owner.contact ? "primary.main" : "text.secondary",
+
+                      cursor: owner.contact ? "pointer" : "default",
+
+                      textDecoration: owner.contact ? "underline" : "none",
+
+                      textUnderlineOffset: "3px",
+
+                      fontWeight: owner.contact ? 600 : 400,
+
+                      "&:hover": {
+                        color: owner.contact ? "primary.light" : undefined,
+                      },
+                    }}
                   >
                     {owner.contact || "-"}
-                  </span>
+                  </Box>
                 </Typography>
-                <Typography
-                  variant="body2"
-                  color="textSecondary"
-                  sx={{ mb: 2 }}
-                >
+
+                {/* ADDRESS */}
+
+                <Typography variant="body2" color="text.secondary">
                   Địa Chỉ:{" "}
-                  <span style={{ color: "#388e3c" }}>
+                  <Box
+                    component="span"
+                    sx={{
+                      color: "success.main",
+                      fontWeight: 500,
+                    }}
+                  >
                     {owner.address || "-"}
-                  </span>
+                  </Box>
                 </Typography>
               </CardContent>
-              <CardActions sx={{ justifyContent: "center", gap: 2 }}>
+
+              {/* ACTIONS */}
+
+              <CardActions
+                sx={{
+                  justifyContent: "center",
+
+                  gap: 1,
+
+                  pt: 0,
+                  pb: 1.5,
+
+                  borderTop: "1px solid",
+
+                  borderColor: "divider",
+                }}
+              >
                 <IconButton color="primary" onClick={() => handleOpen(owner)}>
                   <Edit />
                 </IconButton>
+
                 <IconButton
                   color="error"
                   onClick={() => handleDelete(owner._id)}
@@ -227,52 +307,150 @@ const Owners = () => {
           ))}
         </Box>
       ) : (
-        // Desktop: Table View
-        <TableContainer component={Paper}>
+        // =====================================================
+        // DESKTOP: TABLE VIEW
+        // =====================================================
+
+        <TableContainer
+          component={Paper}
+          sx={{
+            borderRadius: 2.5,
+            overflow: "hidden",
+
+            border: "1px solid",
+            borderColor: "divider",
+
+            backgroundColor: "background.paper",
+
+            boxShadow: 1,
+          }}
+        >
           <Table>
+            {/* ================= HEADER ================= */}
+
             <TableHead>
-              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
-                <TableCell>
-                  <strong>Tên Chủ</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Liên Hệ</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Địa Chỉ</strong>
-                </TableCell>
-                <TableCell align="center">
-                  <strong>Hành Động</strong>
-                </TableCell>
+              <TableRow
+                sx={(theme) => ({
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#1e293b" : "#f5f7fa",
+
+                  "& .MuiTableCell-head": {
+                    color:
+                      theme.palette.mode === "dark"
+                        ? "#f8fafc"
+                        : "text.primary",
+
+                    fontWeight: 700,
+
+                    borderBottom: "1px solid",
+
+                    borderColor: "divider",
+                  },
+                })}
+              >
+                <TableCell>Tên Chủ</TableCell>
+
+                <TableCell>Liên Hệ</TableCell>
+
+                <TableCell>Địa Chỉ</TableCell>
+
+                <TableCell align="center">Hành Động</TableCell>
               </TableRow>
             </TableHead>
+
+            {/* ================= BODY ================= */}
+
             <TableBody>
               {filteredOwners.map((owner) => (
-                <TableRow key={owner._id}>
-                  <TableCell>{owner.name}</TableCell>
+                <TableRow
+                  key={owner._id}
+                  hover
+                  sx={{
+                    transition: "background-color 0.15s ease",
+
+                    "&:last-child td": {
+                      borderBottom: 0,
+                    },
+                  }}
+                >
+                  {/* NAME */}
+
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "text.primary",
+                      }}
+                    >
+                      {owner.name}
+                    </Typography>
+                  </TableCell>
+
+                  {/* CONTACT */}
+
                   <TableCell>
                     {owner.contact ? (
-                      <span
-                        style={{
-                          color: "#1976d2",
-                          cursor: "pointer",
-                          textDecoration: "underline",
-                        }}
+                      <Box
+                        component="span"
                         onClick={() => handleCall(owner.contact)}
+                        sx={{
+                          color: "primary.main",
+
+                          cursor: "pointer",
+
+                          textDecoration: "underline",
+
+                          textUnderlineOffset: "3px",
+
+                          fontWeight: 500,
+
+                          "&:hover": {
+                            color: "primary.light",
+                          },
+                        }}
                       >
                         {owner.contact}
-                      </span>
+                      </Box>
                     ) : (
-                      "-"
+                      <Typography variant="body2" color="text.secondary">
+                        -
+                      </Typography>
                     )}
                   </TableCell>
-                  <TableCell>{owner.address || "-"}</TableCell>
+
+                  {/* ADDRESS */}
+
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: owner.address
+                          ? "text.primary"
+                          : "text.secondary",
+                      }}
+                    >
+                      {owner.address || "-"}
+                    </Typography>
+                  </TableCell>
+
+                  {/* ACTIONS */}
+
                   <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleOpen(owner)}>
-                      <Edit fontSize="small" />
-                    </IconButton>
                     <IconButton
                       size="small"
+                      color="primary"
+                      onClick={() => handleOpen(owner)}
+                      sx={{
+                        mr: 0.5,
+                      }}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      color="error"
                       onClick={() => handleDelete(owner._id)}
                     >
                       <Delete fontSize="small" />

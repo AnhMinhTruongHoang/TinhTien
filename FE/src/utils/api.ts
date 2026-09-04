@@ -160,6 +160,47 @@ export const calculationHistoryApi = {
     request<any>(`/calculation-history/${id}`, {
       method: "DELETE",
     }),
+
+  markMonthAsPaid: (data: {
+    ownerId: string;
+    animalTypeId: string;
+    month: string;
+  }) =>
+    request<any>("/calculation-history/month/paid", {
+      method: "PUT",
+      body: data,
+    }),
+};
+
+export const backupApi = {
+  getAll: () => request<any[]>("/backup"),
+
+  create: () =>
+    request<any>("/backup", {
+      method: "POST",
+    }),
+
+  delete: (filename: string) =>
+    request<any>(`/backup/${encodeURIComponent(filename)}`, {
+      method: "DELETE",
+    }),
+
+  getDownloadUrl: (filename: string) =>
+    `${API_BASE_URL}/backup/${encodeURIComponent(filename)}/download`,
+
+  restoreTest: (filename: string) =>
+    request<any>(`/backup/${encodeURIComponent(filename)}/restore-test`, {
+      method: "POST",
+    }),
+
+  restore: (filename: string, confirmation: string) =>
+    request<any>(`/backup/${encodeURIComponent(filename)}/restore`, {
+      method: "POST",
+
+      body: {
+        confirmation,
+      },
+    }),
 };
 // Cập nhật object api
 export const api = {
@@ -167,4 +208,5 @@ export const api = {
   owners: ownersApi,
   animalTypes: animalTypesApi,
   calculationHistory: calculationHistoryApi,
+  backup: backupApi,
 };
