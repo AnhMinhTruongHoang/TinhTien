@@ -57,15 +57,35 @@ export class CalculationHistoryService {
     return history.save();
   }
   ///
-  async findAll() {
-    return this.historyModel
+  async findAll(): Promise<any[]> {
+    // console.log('===== HISTORY FIND ALL START =====');
+
+    const histories = await this.historyModel
       .find()
-      .populate({
-        path: 'dailyLog',
-        populate: [{ path: 'owner' }, { path: 'animalType' }],
+      .sort({
+        calculatedAt: -1,
+        createdAt: -1,
       })
-      .sort({ calculatedAt: -1 })
+      .lean()
       .exec();
+
+    // console.log('HISTORY DOCUMENTS:', histories.length);
+
+    const result = await this.historyModel.populate(histories, {
+      path: 'dailyLog',
+      populate: [
+        {
+          path: 'owner',
+        },
+        {
+          path: 'animalType',
+        },
+      ],
+    });
+
+    // console.log('===== HISTORY FIND ALL DONE =====');
+
+    return result;
   }
   ///
   async findByDailyLog(dailyLogId: string) {

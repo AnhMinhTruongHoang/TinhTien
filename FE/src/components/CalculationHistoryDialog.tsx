@@ -38,13 +38,28 @@ const CalculationHistoryDialog = ({
     try {
       setLoadingHistory(true);
 
-      const data = await api.calculationHistory.getAll();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("Tải lịch sử quá lâu, vui lòng thử lại"));
+        }, 10000);
+      });
 
-      setCostHistory(data);
+      const data = await Promise.race([
+        api.calculationHistory.getAll(),
+        timeoutPromise,
+      ]);
+
+      setCostHistory(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Không thể tải lịch sử:", error);
 
-      toast.error("Không thể tải lịch sử tính chi phí");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải lịch sử tính chi phí"
+      );
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -369,7 +384,7 @@ const CalculationHistoryDialog = ({
 
                     {deleted && (
                       <Box
-                        sx={{
+                        sx={(theme) => ({
                           display: "inline-flex",
 
                           px: 1.25,
@@ -377,14 +392,28 @@ const CalculationHistoryDialog = ({
 
                           borderRadius: 999,
 
-                          backgroundColor: "#ffebee",
-                          color: "error.main",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(244, 67, 54, 0.12)"
+                              : "#ffebee",
+
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "error.light"
+                              : "error.main",
+
+                          border: "1px solid",
+
+                          borderColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(244, 67, 54, 0.25)"
+                              : "transparent",
 
                           fontSize: 12,
                           fontWeight: 600,
 
                           mb: 1.5,
-                        }}
+                        })}
                       >
                         Log gốc đã bị xóa
                       </Box>
@@ -392,7 +421,7 @@ const CalculationHistoryDialog = ({
 
                     {!deleted && outdated && (
                       <Box
-                        sx={{
+                        sx={(theme) => ({
                           display: "inline-flex",
 
                           px: 1.25,
@@ -400,14 +429,28 @@ const CalculationHistoryDialog = ({
 
                           borderRadius: 999,
 
-                          backgroundColor: "#fff3cd",
-                          color: "#8a6d3b",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255, 193, 7, 0.14)"
+                              : "#fff3cd",
+
+                          color:
+                            theme.palette.mode === "dark"
+                              ? "warning.light"
+                              : "#8a6d3b",
+
+                          border: "1px solid",
+
+                          borderColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255, 193, 7, 0.28)"
+                              : "transparent",
 
                           fontSize: 12,
                           fontWeight: 600,
 
                           mb: 1.5,
-                        }}
+                        })}
                       >
                         Log hiện tại đã được cập nhật
                       </Box>
@@ -417,18 +460,24 @@ const CalculationHistoryDialog = ({
 
                     {!deleted && (
                       <Box
-                        sx={{
+                        sx={(theme) => ({
                           p: 1.5,
-
                           borderRadius: 2,
 
-                          backgroundColor: "#f8fafc",
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(30, 41, 59, 0.72)"
+                              : "#f8fafc",
 
                           border: "1px solid",
-                          borderColor: "divider",
+
+                          borderColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.08)"
+                              : "divider",
 
                           mb: 1.25,
-                        }}
+                        })}
                       >
                         <Typography
                           variant="subtitle2"
@@ -478,24 +527,28 @@ const CalculationHistoryDialog = ({
                     {/* ================= SNAPSHOT ================= */}
 
                     <Box
-                      sx={{
+                      sx={(theme) => ({
                         p: 1.5,
-
                         borderRadius: 2,
 
-                        backgroundColor: "#eef6ff",
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(25, 118, 210, 0.10)"
+                            : "#eef6ff",
 
                         border: "1px solid",
-                        borderColor: "#b6d4fe",
-                      }}
+
+                        borderColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(144, 202, 249, 0.28)"
+                            : "#b6d4fe",
+                      })}
                     >
                       <Typography
                         variant="subtitle2"
                         sx={{
                           mb: 1.25,
-
                           fontWeight: 700,
-
                           color: "primary.main",
                         }}
                       >

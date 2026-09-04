@@ -15,12 +15,13 @@ import {
 import {
   Pets,
   Group,
-  Category,
   ReceiptLong,
   Payments,
   Paid,
   PendingActions,
   CalendarMonth,
+  PriceChangeOutlined,
+  PetsOutlined,
 } from "@mui/icons-material";
 
 import { api } from "@/utils/api";
@@ -279,7 +280,7 @@ const Dashboard = () => {
       value: formatMoney(stats.totalCost),
       description: "Tổng tiền đã tính",
       icon: (
-        <Payments
+        <PriceChangeOutlined
           sx={{
             fontSize: 38,
             color: "primary.main",
@@ -335,7 +336,7 @@ const Dashboard = () => {
       value: stats.totalAnimalTypes,
       description: "Tổng số loại",
       icon: (
-        <Category
+        <PetsOutlined
           sx={{
             fontSize: 38,
             color: "secondary.main",

@@ -158,14 +158,23 @@ const CalculateCostDialog = ({
         {/* Kết quả */}
         {costResult && (
           <Card
-            sx={{
+            sx={(theme) => ({
               mb: 2,
               borderRadius: 2.5,
               boxShadow: 0,
+
               border: "1px solid",
-              borderColor: "divider",
-              backgroundColor: "#f8fafc",
-            }}
+
+              borderColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(144, 202, 249, 0.22)"
+                  : "divider",
+
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(30, 41, 59, 0.75)"
+                  : "#f8fafc",
+            })}
           >
             <CardContent
               sx={{
@@ -180,6 +189,7 @@ const CalculateCostDialog = ({
                 sx={{
                   fontWeight: 700,
                   mb: 1.5,
+                  color: "text.primary",
                 }}
               >
                 Kết Quả
@@ -192,18 +202,18 @@ const CalculateCostDialog = ({
                   gap: 1,
                 }}
               >
-                <Typography variant="body2">
+                <Typography color="text.primary" variant="body2">
                   <strong>Ngày:</strong>{" "}
                   {costResult.date
                     ? dayjs(costResult.date).format("DD/MM/YYYY")
                     : "—"}
                 </Typography>
 
-                <Typography variant="body2">
+                <Typography color="text.primary" variant="body2">
                   <strong>Số con:</strong> {costResult.quantity ?? "—"}
                 </Typography>
 
-                <Typography variant="body2">
+                <Typography color="text.primary" variant="body2">
                   <strong>Đơn giá:</strong>{" "}
                   {Number(costResult.pricePerUnit || 0).toLocaleString("vi-VN")}
                   đ

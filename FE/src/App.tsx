@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Batches from "./pages/Batches";
 import Owners from "./pages/Owners";
 import AnimalTypes from "./pages/AnimalTypes";
+import Employees from "./pages/Employees";
 
 function App() {
   const theme = useTheme();
@@ -20,6 +21,7 @@ function App() {
             <Route path="/batches" element={<Batches />} />
             <Route path="/owners" element={<Owners />} />
             <Route path="/animal-types" element={<AnimalTypes />} />
+            <Route path="/employees" element={<Employees />} />
           </Routes>
         </Box>
       </Container>

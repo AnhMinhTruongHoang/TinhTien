@@ -21,10 +21,10 @@ import SavingsIcon from "@mui/icons-material/Savings";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
-import PetsRoundedIcon from "@mui/icons-material/PetsRounded";
+import ChecklistIcon from "@mui/icons-material/Checklist";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
-import CategoryRoundedIcon from "@mui/icons-material/CategoryRounded";
-
+import PetsIcon from "@mui/icons-material/Pets";
+import BadgeIcon from "@mui/icons-material/Badge";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 
 const Navbar = () => {
@@ -51,7 +51,7 @@ const Navbar = () => {
     {
       label: "Nhật Ký",
       path: "/batches",
-      icon: <PetsRoundedIcon fontSize="small" />,
+      icon: <ChecklistIcon fontSize="small" />,
     },
     {
       label: "Chủ Động Vật",
@@ -61,7 +61,14 @@ const Navbar = () => {
     {
       label: "Loại Động Vật",
       path: "/animal-types",
-      icon: <CategoryRoundedIcon fontSize="small" />,
+      icon: <PetsIcon fontSize="small" />,
+    },
+    {
+      label: "Nhân Viên",
+      path: "/employees",
+      icon: (
+        <BadgeIcon fontSize="small" />
+      ),
     },
   ];
 

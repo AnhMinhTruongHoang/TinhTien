@@ -14,26 +14,56 @@ async function request<T>(
 
   const config: RequestInit = {
     method,
+
     headers: {
       "Content-Type": "application/json",
       ...headers,
     },
   };
 
-  if (body && method !== "GET") {
+  if (body !== undefined && method !== "GET") {
     config.body = JSON.stringify(body);
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `HTTP ${response.status}`);
+  // =====================================================
+  // ĐỌC BODY DẠNG TEXT TRƯỚC
+  // Không gọi response.json() trực tiếp vì response có thể rỗng
+  // =====================================================
+
+  const text = await response.text();
+
+  let data: any = null;
+
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
   }
 
-  return response.json() as Promise<T>;
-}
+  // =====================================================
+  // ERROR RESPONSE
+  // =====================================================
 
+  if (!response.ok) {
+    const message =
+      typeof data === "object" ? data?.message || data?.error : data;
+
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+
+  // =====================================================
+  // SUCCESS NHƯNG KHÔNG CÓ BODY
+  // Ví dụ:
+  // - MonthlyPayroll chưa tồn tại
+  // - DELETE trả 204
+  // =====================================================
+
+  return data as T;
+}
 // ============ BATCHES API ============
 export const batchesApi = {
   create: (data: any) =>
@@ -202,6 +232,136 @@ export const backupApi = {
       },
     }),
 };
+
+export const employeesApi = {
+  getAll: () => request<any[]>("/employees"),
+
+  create: (data: {
+    name: string;
+    phone?: string;
+    address?: string;
+    baseSalary: number;
+    notes?: string;
+  }) =>
+    request<any>("/employees", {
+      method: "POST",
+      body: data,
+    }),
+
+  update: (id: string, data: any) =>
+    request<any>(`/employees/${id}`, {
+      method: "PUT",
+      body: data,
+    }),
+
+  delete: (id: string) =>
+    request<any>(`/employees/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+export const employeeAbsencesApi = {
+  getAll: (employeeId?: string) =>
+    request<any[]>(
+      employeeId
+        ? `/employee-absences?employeeId=${encodeURIComponent(employeeId)}`
+        : "/employee-absences"
+    ),
+
+  create: (data: {
+    employeeId: string;
+    date: string;
+    reason: string;
+    deductionAmount: number;
+    notes?: string;
+  }) =>
+    request<any>("/employee-absences", {
+      method: "POST",
+      body: data,
+    }),
+
+  update: (id: string, data: any) =>
+    request<any>(`/employee-absences/${id}`, {
+      method: "PUT",
+      body: data,
+    }),
+
+  delete: (id: string) =>
+    request<any>(`/employee-absences/${id}`, {
+      method: "DELETE",
+    }),
+
+  monthSummary: (employeeId: string, month: string) =>
+    request<any>(
+      `/employee-absences/month-summary?employeeId=${encodeURIComponent(
+        employeeId
+      )}&month=${encodeURIComponent(month)}`
+    ),
+};
+
+export const monthlyPayrollsApi = {
+  get: (employeeId: string, month: string) =>
+    request<any | null>(
+      `/monthly-payrolls?employeeId=${encodeURIComponent(
+        employeeId
+      )}&month=${encodeURIComponent(month)}`
+    ),
+
+  finalize: (data: { employeeId: string; month: string }) =>
+    request<any>("/monthly-payrolls/finalize", {
+      method: "POST",
+      body: data,
+    }),
+
+  getByMonth: (month: string) =>
+    request<any[]>(
+      `/monthly-payrolls/month?month=${encodeURIComponent(month)}`
+    ),
+};
+
+export const salaryAdvancesApi = {
+  getSummary: (employeeId: string, month: string) =>
+    request<any>(
+      `/salary-advances/summary?employeeId=${encodeURIComponent(
+        employeeId
+      )}&month=${encodeURIComponent(month)}`
+    ),
+
+  getAll: (employeeId: string, month: string) =>
+    request<any[]>(
+      `/salary-advances?employeeId=${encodeURIComponent(
+        employeeId
+      )}&month=${encodeURIComponent(month)}`
+    ),
+
+  create: (data: {
+    employeeId: string;
+    month: string;
+    amount: number;
+    date: string;
+    note?: string;
+  }) =>
+    request<any>("/salary-advances", {
+      method: "POST",
+      body: data,
+    }),
+
+  createFull: (data: {
+    employeeId: string;
+    month: string;
+    date: string;
+    note?: string;
+  }) =>
+    request<any>("/salary-advances/full", {
+      method: "POST",
+      body: data,
+    }),
+
+  delete: (id: string) =>
+    request<any>(`/salary-advances/${id}`, {
+      method: "DELETE",
+    }),
+};
 // Cập nhật object api
 export const api = {
   dailyLogs: dailyLogsApi,
@@ -209,4 +369,8 @@ export const api = {
   animalTypes: animalTypesApi,
   calculationHistory: calculationHistoryApi,
   backup: backupApi,
+  employees: employeesApi,
+  employeeAbsences: employeeAbsencesApi,
+  monthlyPayrolls: monthlyPayrollsApi,
+  salaryAdvances: salaryAdvancesApi,
 };

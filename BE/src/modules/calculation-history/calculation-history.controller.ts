@@ -21,7 +21,7 @@ export class CalculationHistoryController {
   }
 
   @Get()
-  findAll() {
+  findAll(): Promise<any[]> {
     return this.service.findAll();
   }
 
