@@ -42,8 +42,7 @@ export class DailyLogsService {
   // - Trạng thái thanh toán
   // =====================================================
 
-  async findAll() {
-    // ================= DAILY LOGS =================
+  async findAll(): Promise<any[]> {
     const logs = await this.dailyLogModel
       .find()
       .populate('owner animalType')
@@ -55,8 +54,6 @@ export class DailyLogsService {
       return [];
     }
 
-    // ================= HISTORIES =================
-    // Lấy history mới nhất trước
     const histories = await this.historyModel
       .find()
       .sort({
@@ -66,10 +63,10 @@ export class DailyLogsService {
       .lean()
       .exec();
 
-    // Danh sách DailyLog đang tồn tại
     const validDailyLogIds = new Set(logs.map((log) => log._id.toString()));
 
     const latestCalculationMap = new Map<string, any>();
+
     const paidCalculationMap = new Map<string, any>();
 
     for (const history of histories) {
@@ -79,29 +76,22 @@ export class DailyLogsService {
 
       const dailyLogId = history.dailyLog.toString();
 
-      // History không thuộc DailyLog hiện tại thì bỏ qua
       if (!validDailyLogIds.has(dailyLogId)) {
         continue;
       }
 
-      // Vì histories sort mới nhất -> cũ
-      // nên cái đầu tiên là lần tính mới nhất
       if (!latestCalculationMap.has(dailyLogId)) {
         latestCalculationMap.set(dailyLogId, history);
       }
 
-      // Nếu đã thanh toán thì lưu history paid
       if (history.isPaid === true && !paidCalculationMap.has(dailyLogId)) {
         paidCalculationMap.set(dailyLogId, history);
       }
     }
 
-    // ================= RESPONSE =================
     return logs.map((log) => {
       const dailyLogId = log._id.toString();
 
-      // Nếu đã paid -> ưu tiên history đã paid.
-      // Nếu chưa -> lấy calculation mới nhất.
       const latestCalculation =
         paidCalculationMap.get(dailyLogId) ??
         latestCalculationMap.get(dailyLogId) ??

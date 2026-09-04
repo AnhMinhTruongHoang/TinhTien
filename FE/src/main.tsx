@@ -1,4 +1,5 @@
 import { StrictMode } from "react";
+
 import { createRoot } from "react-dom/client";
 
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -11,6 +12,8 @@ import { ToastContainer } from "react-toastify";
 
 import AppThemeProvider from "./theme/AppThemeProvider";
 
+import { AuthProvider } from "./contexts/AuthContext";
+
 import "dayjs/locale/vi";
 import "react-toastify/dist/ReactToastify.css";
 import "./index.css";
@@ -18,15 +21,15 @@ import "./index.css";
 import App from "./App.tsx";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <AppThemeProvider>
-      <LocalizationProvider
-        dateAdapter={AdapterDayjs}
-        adapterLocale="vi"
-        localeText={
-          viVN.components.MuiLocalizationProvider.defaultProps.localeText
-        }
-      >
+  <AppThemeProvider>
+    <LocalizationProvider
+      dateAdapter={AdapterDayjs}
+      adapterLocale="vi"
+      localeText={
+        viVN.components.MuiLocalizationProvider.defaultProps.localeText
+      }
+    >
+      <AuthProvider>
         <App />
 
         <ToastContainer
@@ -40,7 +43,7 @@ createRoot(document.getElementById("root")!).render(
           theme="colored"
           limit={3}
         />
-      </LocalizationProvider>
-    </AppThemeProvider>
-  </StrictMode>
+      </AuthProvider>
+    </LocalizationProvider>
+  </AppThemeProvider>
 );

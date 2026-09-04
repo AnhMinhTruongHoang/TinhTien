@@ -26,6 +26,11 @@ import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import PetsIcon from "@mui/icons-material/Pets";
 import BadgeIcon from "@mui/icons-material/Badge";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
+import { Logout } from "@mui/icons-material";
+
+import { useAuth } from "../contexts/AuthContext";
+
+import { toast } from "react-toastify";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -37,6 +42,25 @@ const Navbar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  ///auth
+
+  const { admin, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+
+      toast.success("Đã đăng xuất");
+
+      navigate("/login", {
+        replace: true,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  ///
 
   // =====================================================
   // MENU
@@ -54,6 +78,11 @@ const Navbar = () => {
       icon: <ChecklistIcon fontSize="small" />,
     },
     {
+      label: "Nhân Viên",
+      path: "/employees",
+      icon: <BadgeIcon fontSize="small" />,
+    },
+    {
       label: "Chủ Động Vật",
       path: "/owners",
       icon: <PeopleAltRoundedIcon fontSize="small" />,
@@ -62,13 +91,6 @@ const Navbar = () => {
       label: "Loại Động Vật",
       path: "/animal-types",
       icon: <PetsIcon fontSize="small" />,
-    },
-    {
-      label: "Nhân Viên",
-      path: "/employees",
-      icon: (
-        <BadgeIcon fontSize="small" />
-      ),
     },
   ];
 
@@ -112,7 +134,6 @@ const Navbar = () => {
           backdropFilter: "blur(14px)",
 
           borderBottom: "1px solid",
-
           borderColor: "divider",
         }}
       >
@@ -129,9 +150,7 @@ const Navbar = () => {
             },
 
             maxWidth: 1500,
-
             width: "100%",
-
             mx: "auto",
           }}
         >
@@ -147,7 +166,6 @@ const Navbar = () => {
               gap: 1.2,
 
               cursor: "pointer",
-
               flexShrink: 0,
             }}
           >
@@ -176,36 +194,6 @@ const Navbar = () => {
                 }}
               />
             </Box>
-
-            <Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 800,
-
-                  lineHeight: 1.05,
-
-                  letterSpacing: "-0.4px",
-
-                  color: "text.primary",
-                }}
-              >
-                Tính Tiền
-              </Typography>
-
-              {!isMobile && (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    lineHeight: 1,
-                    fontSize: 11,
-                  }}
-                >
-                  Quản lý chi phí
-                </Typography>
-              )}
-            </Box>
           </Box>
 
           {/* SPACE */}
@@ -221,92 +209,164 @@ const Navbar = () => {
           ================================================= */}
 
           {!isMobile && (
-            <Box
-              sx={{
-                display: "flex",
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
 
-                alignItems: "center",
+                  gap: 0.5,
 
-                gap: 0.5,
+                  p: 0.5,
 
-                p: 0.5,
+                  borderRadius: 3,
 
-                borderRadius: 3,
+                  backgroundColor: alpha(
+                    theme.palette.text.primary,
 
-                backgroundColor: alpha(
-                  theme.palette.text.primary,
-                  theme.palette.mode === "dark" ? 0.035 : 0.025
-                ),
+                    theme.palette.mode === "dark" ? 0.035 : 0.025
+                  ),
 
-                mr: 1.5,
-              }}
-            >
-              {menuItems.map((item) => {
-                const active = isActive(item.path);
+                  mr: 1.5,
+                }}
+              >
+                {menuItems.map((item) => {
+                  const active = isActive(item.path);
 
-                return (
-                  <Button
-                    key={item.path}
-                    onClick={() => handleNavigation(item.path)}
-                    startIcon={item.icon}
+                  return (
+                    <Button
+                      key={item.path}
+                      onClick={() => handleNavigation(item.path)}
+                      startIcon={item.icon}
+                      sx={{
+                        px: 1.7,
+                        py: 0.9,
+
+                        borderRadius: 2.2,
+
+                        textTransform: "none",
+
+                        whiteSpace: "nowrap",
+
+                        fontSize: 14,
+
+                        fontWeight: active ? 700 : 500,
+
+                        color: active ? "primary.main" : "text.secondary",
+
+                        backgroundColor: active
+                          ? alpha(
+                              theme.palette.primary.main,
+
+                              theme.palette.mode === "dark" ? 0.16 : 0.09
+                            )
+                          : "transparent",
+
+                        "&:hover": {
+                          color: "primary.main",
+
+                          backgroundColor: alpha(
+                            theme.palette.primary.main,
+
+                            theme.palette.mode === "dark" ? 0.13 : 0.07
+                          ),
+                        },
+
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      {item.label}
+                    </Button>
+                  );
+                })}
+              </Box>
+
+              {/* =============================================
+                  ADMIN
+              ============================================= */}
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+
+                  gap: 1,
+
+                  pl: 1.5,
+                  ml: 0.5,
+
+                  borderLeft: "1px solid",
+
+                  borderColor: "divider",
+                }}
+              >
+                <Box
+                  sx={{
+                    textAlign: "right",
+
+                    maxWidth: 130,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
                     sx={{
-                      px: 1.7,
-                      py: 0.9,
+                      fontWeight: 700,
 
-                      borderRadius: 2.2,
+                      lineHeight: 1.2,
 
-                      textTransform: "none",
+                      overflow: "hidden",
+
+                      textOverflow: "ellipsis",
 
                       whiteSpace: "nowrap",
-
-                      fontSize: 14,
-
-                      fontWeight: active ? 700 : 500,
-
-                      color: active ? "primary.main" : "text.secondary",
-
-                      backgroundColor: active
-                        ? alpha(
-                            theme.palette.primary.main,
-                            theme.palette.mode === "dark" ? 0.16 : 0.09
-                          )
-                        : "transparent",
-
-                      "&:hover": {
-                        color: "primary.main",
-
-                        backgroundColor: alpha(
-                          theme.palette.primary.main,
-                          theme.palette.mode === "dark" ? 0.13 : 0.07
-                        ),
-                      },
-
-                      transition: "all 0.2s ease",
                     }}
                   >
-                    {item.label}
-                  </Button>
-                );
-              })}
-            </Box>
-          )}
+                    {admin?.name || admin?.username || "Admin"}
+                  </Typography>
 
-          {/* =================================================
-              DARK MODE
-          ================================================= */}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
 
-          {!isMobile && (
-            <Box
-              sx={{
-                ml: 0.5,
+                      fontSize: 10.5,
+                    }}
+                  >
+                    Quản trị viên
+                  </Typography>
+                </Box>
 
-                display: "flex",
+                {/* DARK MODE */}
 
-                alignItems: "center",
-              }}
-            >
-              <ThemeToggleButton />
-            </Box>
+                <ThemeToggleButton />
+
+                {/* LOGOUT */}
+
+                <Tooltip title="Đăng xuất">
+                  <IconButton
+                    onClick={handleLogout}
+                    sx={{
+                      width: 40,
+                      height: 40,
+
+                      border: "1px solid",
+
+                      borderColor: "divider",
+
+                      color: "error.main",
+
+                      "&:hover": {
+                        backgroundColor: alpha(theme.palette.error.main, 0.08),
+
+                        borderColor: alpha(theme.palette.error.main, 0.35),
+                      },
+                    }}
+                  >
+                    <Logout fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </>
           )}
 
           {/* =================================================
@@ -355,6 +415,9 @@ const Navbar = () => {
 
               maxWidth: 320,
 
+              display: "flex",
+              flexDirection: "column",
+
               backgroundImage: "none",
 
               backgroundColor: "background.paper",
@@ -381,6 +444,7 @@ const Navbar = () => {
             sx={{
               display: "flex",
               alignItems: "center",
+
               gap: 1.2,
             }}
           >
@@ -404,21 +468,6 @@ const Navbar = () => {
             >
               <SavingsIcon />
             </Box>
-
-            <Box>
-              <Typography
-                sx={{
-                  fontWeight: 800,
-                  lineHeight: 1.1,
-                }}
-              >
-                Tính Tiền
-              </Typography>
-
-              <Typography variant="caption" color="text.secondary">
-                Quản lý chi phí
-              </Typography>
-            </Box>
           </Box>
 
           <IconButton onClick={() => setDrawerOpen(false)}>
@@ -440,7 +489,6 @@ const Navbar = () => {
         >
           <Typography
             variant="caption"
-            color="text.secondary"
             sx={{
               display: "block",
 
@@ -452,6 +500,8 @@ const Navbar = () => {
               textTransform: "uppercase",
 
               letterSpacing: "0.7px",
+
+              color: "text.secondary",
             }}
           >
             Menu
@@ -492,6 +542,7 @@ const Navbar = () => {
                     backgroundColor: active
                       ? alpha(
                           theme.palette.primary.main,
+
                           theme.palette.mode === "dark" ? 0.16 : 0.09
                         )
                       : "transparent",
@@ -499,6 +550,7 @@ const Navbar = () => {
                     "&:hover": {
                       backgroundColor: alpha(
                         theme.palette.primary.main,
+
                         theme.palette.mode === "dark" ? 0.13 : 0.07
                       ),
                     },
@@ -512,7 +564,99 @@ const Navbar = () => {
         </Box>
 
         {/* =================================================
-            BOTTOM
+            ADMIN INFO MOBILE
+        ================================================= */}
+
+        <Box
+          sx={{
+            px: 1.5,
+            pb: 2,
+          }}
+        >
+          <Divider
+            sx={{
+              mb: 2,
+            }}
+          />
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+
+              px: 1.5,
+              mb: 1,
+
+              fontWeight: 700,
+
+              textTransform: "uppercase",
+
+              letterSpacing: "0.7px",
+
+              color: "text.secondary",
+            }}
+          >
+            Tài khoản
+          </Typography>
+
+          <Box
+            sx={{
+              p: 1.5,
+
+              borderRadius: 2.5,
+
+              backgroundColor: alpha(
+                theme.palette.primary.main,
+
+                theme.palette.mode === "dark" ? 0.1 : 0.05
+              ),
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 700,
+
+                color: "text.primary",
+              }}
+            >
+              {admin?.name || admin?.username || "Admin"}
+            </Typography>
+
+            <Typography
+              variant="caption"
+              sx={{
+                display: "block",
+
+                mt: 0.2,
+                mb: 1.5,
+
+                color: "text.secondary",
+              }}
+            >
+              @{admin?.username || "admin"}
+            </Typography>
+
+            <Button
+              fullWidth
+              variant="outlined"
+              color="error"
+              startIcon={<Logout />}
+              onClick={handleLogout}
+              sx={{
+                borderRadius: 2,
+
+                textTransform: "none",
+
+                fontWeight: 600,
+              }}
+            >
+              Đăng xuất
+            </Button>
+          </Box>
+        </Box>
+
+        {/* =================================================
+            BOTTOM - THEME
         ================================================= */}
 
         <Box
@@ -543,7 +687,12 @@ const Navbar = () => {
                 Giao diện
               </Typography>
 
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 Sáng / tối
               </Typography>
             </Box>

@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 
 import {
-  Pets,
   Group,
   ReceiptLong,
   Payments,
@@ -22,6 +21,7 @@ import {
   CalendarMonth,
   PriceChangeOutlined,
   PetsOutlined,
+  SavingsOutlined,
 } from "@mui/icons-material";
 
 import { api } from "@/utils/api";
@@ -252,7 +252,7 @@ const Dashboard = () => {
         "vi-VN"
       )} con trong tháng`,
       icon: (
-        <Pets
+        <SavingsOutlined
           sx={{
             fontSize: 38,
             color: "secondary.main",

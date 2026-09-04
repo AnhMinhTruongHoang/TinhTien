@@ -5,17 +5,27 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
+import cookieParser = require('cookie-parser');
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Bật CORS
+  app.use(cookieParser());
+
   app.enableCors({
-    origin: '*', // hoặc '*' nếu muốn cho tất cả
-    methods: 'GET,POST,PUT,DELETE',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+
     credentials: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+    }),
+  );
+
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
+
 bootstrap();

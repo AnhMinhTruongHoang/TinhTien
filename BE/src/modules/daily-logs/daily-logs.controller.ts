@@ -22,7 +22,7 @@ export class DailyLogsController {
   }
 
   @Get()
-  findAll() {
+  findAll(): Promise<any[]> {
     return this.dailyLogsService.findAll();
   }
 

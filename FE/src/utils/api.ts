@@ -15,12 +15,13 @@ async function request<T>(
   const config: RequestInit = {
     method,
 
+    credentials: "include",
+
     headers: {
       "Content-Type": "application/json",
       ...headers,
     },
   };
-
   if (body !== undefined && method !== "GET") {
     config.body = JSON.stringify(body);
   }
@@ -49,6 +50,11 @@ async function request<T>(
   // =====================================================
 
   if (!response.ok) {
+    // JWT hết hạn / không hợp lệ
+    if (response.status === 401 && endpoint !== "/auth/login") {
+      window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    }
+
     const message =
       typeof data === "object" ? data?.message || data?.error : data;
 
@@ -362,6 +368,34 @@ export const salaryAdvancesApi = {
       method: "DELETE",
     }),
 };
+
+// ============ AUTH API ============
+
+export interface AdminUser {
+  _id: string;
+  username: string;
+  name: string;
+  lastLoginAt?: string;
+}
+
+export const authApi = {
+  login: (data: { username: string; password: string }) =>
+    request<{
+      admin: AdminUser;
+    }>("/auth/login", {
+      method: "POST",
+      body: data,
+    }),
+
+  me: () => request<AdminUser>("/auth/me"),
+
+  logout: () =>
+    request<{
+      message: string;
+    }>("/auth/logout", {
+      method: "POST",
+    }),
+};
 // Cập nhật object api
 export const api = {
   dailyLogs: dailyLogsApi,
@@ -373,4 +407,5 @@ export const api = {
   employeeAbsences: employeeAbsencesApi,
   monthlyPayrolls: monthlyPayrollsApi,
   salaryAdvances: salaryAdvancesApi,
+  auth: authApi,
 };
