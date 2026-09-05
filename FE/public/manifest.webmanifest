@@ -1,0 +1,25 @@
+{
+  "name": "Tính Tiền - Hoàng Thị Liêm",
+  "short_name": "Tính Tiền",
+  "description": "Quản lý nhật ký giết mổ, chi phí và nhân viên",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/pig.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/pig.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "maskable"
+    }
+  ]
+}
