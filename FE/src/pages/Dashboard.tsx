@@ -736,13 +736,27 @@ const Dashboard = () => {
           sx={{
             mb: 2,
             fontWeight: 700,
+
+            textAlign: {
+              xs: "center",
+              sm: "left",
+            },
           }}
         >
           Nhật Ký Gần Đây
         </Typography>
 
         {recentLogs.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              textAlign: {
+                xs: "center",
+                sm: "left",
+              },
+            }}
+          >
             Chưa có nhật ký.
           </Typography>
         ) : (
@@ -779,12 +793,12 @@ const Dashboard = () => {
                       sm: "row",
                     },
 
-                    alignItems: {
-                      xs: "flex-start",
-                      sm: "center",
-                    },
+                    alignItems: "center",
 
-                    justifyContent: "space-between",
+                    justifyContent: {
+                      xs: "center",
+                      sm: "space-between",
+                    },
 
                     gap: 1.5,
 
@@ -795,9 +809,26 @@ const Dashboard = () => {
                     border: "1px solid",
 
                     borderColor: "divider",
+
+                    textAlign: {
+                      xs: "center",
+                      sm: "left",
+                    },
                   }}
                 >
-                  <Box>
+                  <Box
+                    sx={{
+                      width: {
+                        xs: "100%",
+                        sm: "auto",
+                      },
+
+                      textAlign: {
+                        xs: "center",
+                        sm: "left",
+                      },
+                    }}
+                  >
                     <Typography
                       sx={{
                         fontWeight: 700,
@@ -817,9 +848,19 @@ const Dashboard = () => {
 
                       alignItems: "center",
 
+                      justifyContent: {
+                        xs: "center",
+                        sm: "flex-end",
+                      },
+
                       flexWrap: "wrap",
 
                       gap: 1,
+
+                      width: {
+                        xs: "100%",
+                        sm: "auto",
+                      },
                     }}
                   >
                     {calculation && (
