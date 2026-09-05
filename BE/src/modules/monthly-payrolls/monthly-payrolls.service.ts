@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 
 import { Model } from 'mongoose';
-
+import { MongoServerError } from 'mongodb';
 import { FinalizePayrollDto } from './dto/finalize-payroll.dto';
 import { MonthlyPayrollDocument } from './schemas/monthly-payroll.schemas';
 import { EmployeeDocument } from '../employee/schemas/employee.schemas';
@@ -50,11 +50,19 @@ export class MonthlyPayrollsService {
   }
 
   async finalize(dto: FinalizePayrollDto) {
+    // =====================================================
+    // CHECK ĐÃ CHỐT
+    // =====================================================
+
     const existing = await this.findByEmployeeMonth(dto.employeeId, dto.month);
 
     if (existing) {
-      throw new BadRequestException('Bảng lương tháng này đã được chốt');
+      return existing;
     }
+
+    // =====================================================
+    // EMPLOYEE
+    // =====================================================
 
     const employee = await this.employeeModel
       .findById(dto.employeeId)
@@ -65,11 +73,19 @@ export class MonthlyPayrollsService {
       throw new NotFoundException('Không tìm thấy nhân viên');
     }
 
+    // =====================================================
+    // MONTH RANGE
+    // =====================================================
+
     const [year, monthNumber] = dto.month.split('-').map(Number);
 
     const startDate = new Date(Date.UTC(year, monthNumber - 1, 1));
 
     const endDate = new Date(Date.UTC(year, monthNumber, 1));
+
+    // =====================================================
+    // ABSENCES
+    // =====================================================
 
     const absences = await this.absenceModel
       .find({
@@ -86,10 +102,13 @@ export class MonthlyPayrollsService {
       .lean()
       .exec();
 
+    // =====================================================
+    // SALARY ADVANCES
+    // =====================================================
+
     const advances = await this.advanceModel
       .find({
         employee: dto.employeeId,
-
         month: dto.month,
       })
       .sort({
@@ -98,6 +117,10 @@ export class MonthlyPayrollsService {
       })
       .lean()
       .exec();
+
+    // =====================================================
+    // CALCULATE
+    // =====================================================
 
     const totalDays = new Date(year, monthNumber, 0).getDate();
 
@@ -114,7 +137,7 @@ export class MonthlyPayrollsService {
 
     const salaryAfterDeduction = Math.max(baseSalary - totalDeduction, 0);
 
-    // Giữ tương thích với field cũ
+    // Giữ tương thích field cũ
     const finalSalary = salaryAfterDeduction;
 
     const totalAdvance = advances.reduce(
@@ -122,7 +145,10 @@ export class MonthlyPayrollsService {
       0,
     );
 
-    // Không cho chốt nếu đã ứng vượt lương
+    // =====================================================
+    // CHECK ỨNG VƯỢT LƯƠNG
+    // =====================================================
+
     if (totalAdvance > salaryAfterDeduction) {
       throw new BadRequestException(
         `Nhân viên đã ứng ${totalAdvance.toLocaleString(
@@ -134,6 +160,10 @@ export class MonthlyPayrollsService {
     }
 
     const remainingSalary = salaryAfterDeduction - totalAdvance;
+
+    // =====================================================
+    // SNAPSHOT
+    // =====================================================
 
     const payroll = new this.payrollModel({
       employee: employee._id,
@@ -165,15 +195,16 @@ export class MonthlyPayrollsService {
 
         reason: item.reason,
 
-        deductionAmount: item.deductionAmount,
+        deductionAmount: Number(item.deductionAmount || 0),
 
         notes: item.notes,
       })),
 
-      advances: advances.map((item) => ({
-        amount: item.amount,
+      advances: advances.map((item: any) => ({
+        amount: Number(item.amount || 0),
 
-        date: item.date,
+        // Hỗ trợ dữ liệu cũ nếu thiếu date
+        date: item.date || item.createdAt || startDate,
 
         note: item.note,
       })),
@@ -181,7 +212,43 @@ export class MonthlyPayrollsService {
       finalizedAt: new Date(),
     });
 
-    return payroll.save();
+    // =====================================================
+    // SAVE
+    // =====================================================
+
+    try {
+      return await payroll.save();
+    } catch (error: any) {
+      // ===================================================
+      // UNIQUE employee + month
+      //
+      // Có thể xảy ra khi user click 2 lần rất nhanh:
+      // request A và B cùng vượt qua existing check.
+      // A save thành công.
+      // B bị E11000.
+      // ===================================================
+
+      if (error?.code === 11000) {
+        const finalizedPayroll = await this.findByEmployeeMonth(
+          dto.employeeId,
+          dto.month,
+        );
+
+        if (finalizedPayroll) {
+          return finalizedPayroll;
+        }
+
+        throw new BadRequestException('Bảng lương tháng này đã được chốt');
+      }
+
+      console.error('PAYROLL SAVE ERROR:', error);
+
+      throw new BadRequestException(
+        error instanceof Error
+          ? `Không thể chốt lương: ${error.message}`
+          : 'Không thể chốt lương tháng',
+      );
+    }
   }
 
   async findByMonth(month: string) {

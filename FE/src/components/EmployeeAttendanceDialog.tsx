@@ -164,6 +164,14 @@ const EmployeeAttendanceDialog = ({ open, onClose, employee }: Props) => {
   const formatMoney = (value: number) =>
     `${Number(value || 0).toLocaleString("en-US")}đ`;
 
+  const formatMoneyInput = (value: number) => {
+    if (!value) {
+      return "";
+    }
+
+    return Number(value).toLocaleString("en-US");
+  };
+
   // =====================================================
   // FETCH SUMMARY
   // =====================================================
@@ -681,6 +689,10 @@ const EmployeeAttendanceDialog = ({ open, onClose, employee }: Props) => {
 
   ///
   const handleFinalizePayroll = async () => {
+    if (finalizing) {
+      return;
+    }
+
     if (!employee || !summary) {
       toast.warning("Chưa có đủ dữ liệu để chốt lương");
       return;
@@ -1586,21 +1598,27 @@ const EmployeeAttendanceDialog = ({ open, onClose, employee }: Props) => {
 
           <TextField
             fullWidth
-            type="number"
+            type="text"
             label="Số tiền trừ"
-            value={formData.deductionAmount}
-            onChange={(e) =>
+            value={formatMoneyInput(formData.deductionAmount)}
+            onChange={(e) => {
+              const rawValue = e.target.value.replace(/\D/g, "");
+
               setFormData((prev) => ({
                 ...prev,
-
-                deductionAmount: Number(e.target.value),
-              }))
-            }
+                deductionAmount: rawValue === "" ? 0 : Number(rawValue),
+              }));
+            }}
             slotProps={{
               htmlInput: {
-                min: 0,
+                inputMode: "numeric",
               },
             }}
+            helperText={
+              formData.deductionAmount > 0
+                ? `${Number(formData.deductionAmount).toLocaleString("en-US")}đ`
+                : "Nhập số tiền cần trừ"
+            }
             sx={{
               mb: 2,
             }}

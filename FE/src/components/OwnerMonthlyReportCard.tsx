@@ -269,6 +269,7 @@ const OwnerMonthlyReportCard = ({
             sx={{
               fontSize: 12,
               color: "#64748b",
+              textAlign: "center",
             }}
           >
             Tổng chi phí
@@ -283,6 +284,7 @@ const OwnerMonthlyReportCard = ({
               fontWeight: 900,
 
               color: "#2563eb",
+              textAlign: "center",
             }}
           >
             {formatMoney(totalCost)}
@@ -304,6 +306,7 @@ const OwnerMonthlyReportCard = ({
             sx={{
               fontSize: 12,
               color: "#64748b",
+              textAlign: "center",
             }}
           >
             Đã nhận
@@ -318,6 +321,7 @@ const OwnerMonthlyReportCard = ({
               fontWeight: 900,
 
               color: "#15803d",
+              textAlign: "center",
             }}
           >
             {formatMoney(totalPaid)}
@@ -339,6 +343,7 @@ const OwnerMonthlyReportCard = ({
             sx={{
               fontSize: 12,
               color: "#64748b",
+              textAlign: "center",
             }}
           >
             Chưa nhận
@@ -353,6 +358,7 @@ const OwnerMonthlyReportCard = ({
               fontWeight: 900,
 
               color: "#ea580c",
+              textAlign: "center",
             }}
           >
             {formatMoney(totalUnpaid)}
@@ -375,6 +381,7 @@ const OwnerMonthlyReportCard = ({
           border: "1px solid",
 
           borderColor: totalUnpaid <= 0 ? "#86efac" : "#fcd34d",
+          textAlign: "center",
         }}
       >
         <Typography
@@ -382,6 +389,7 @@ const OwnerMonthlyReportCard = ({
             fontWeight: 800,
 
             color: totalUnpaid <= 0 ? "#15803d" : "#b45309",
+            textAlign: "center",
           }}
         >
           {totalUnpaid <= 0
@@ -396,6 +404,7 @@ const OwnerMonthlyReportCard = ({
             fontSize: 13,
 
             color: "#64748b",
+            textAlign: "center",
           }}
         >
           Đã nhận tiền: {paidDays}/{calculatedDays} ngày đã tính

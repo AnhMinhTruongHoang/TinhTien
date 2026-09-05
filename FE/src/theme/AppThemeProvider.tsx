@@ -16,7 +16,7 @@ interface ThemeModeContextType {
 }
 
 const ThemeModeContext = createContext<ThemeModeContextType>({
-  mode: "light",
+  mode: "dark",
   toggleTheme: () => {},
 });
 
@@ -30,7 +30,11 @@ const AppThemeProvider = ({ children }: Props) => {
   const [mode, setMode] = useState<ThemeMode>(() => {
     const savedMode = localStorage.getItem("theme-mode");
 
-    return savedMode === "dark" ? "dark" : "light";
+    if (savedMode === "light" || savedMode === "dark") {
+      return savedMode;
+    }
+
+    return "dark";
   });
 
   const toggleTheme = () => {

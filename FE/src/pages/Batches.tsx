@@ -642,7 +642,10 @@ const Batches = () => {
       return;
     }
 
-    // Update UI ngay lập tức
+    // =====================================================
+    // UPDATE NGAY UI
+    // =====================================================
+
     setDailyLogs((prev) =>
       prev.map((log) =>
         log._id === dailyLogId
@@ -654,18 +657,55 @@ const Batches = () => {
       )
     );
 
-    // Đồng bộ lại với backend
+    // =====================================================
+    // REFRESH TABLE TỪ BACKEND
+    // =====================================================
+
     try {
       const freshLogs = await api.dailyLogs.getAll();
 
-      const updatedLog = freshLogs.find((log) => log._id === dailyLogId);
-
-      // Chỉ replace nếu backend đã trả latestCalculation
-      if (updatedLog?.latestCalculation) {
-        setDailyLogs(freshLogs);
-      }
+      setDailyLogs(freshLogs);
     } catch (error) {
       console.error("Không thể refresh DailyLog:", error);
+    }
+
+    // =====================================================
+    // REFRESH TỔNG THÁNG
+    // =====================================================
+
+    if (monthSummary && filterOwner && filterAnimalType && filterMonth) {
+      try {
+        const freshSummary = await api.dailyLogs.monthSummary(
+          filterOwner,
+          filterAnimalType,
+          filterMonth.format("YYYY-MM")
+        );
+
+        setMonthSummary(freshSummary);
+      } catch (error) {
+        console.error("Không thể refresh tổng tháng:", error);
+      }
+    }
+  };
+  ///
+
+  const handleDailyLogSaved = async () => {
+    // Refresh lại bảng nhật ký
+    await fetchDailyLogs();
+
+    // Nếu đang mở tổng tháng thì refresh luôn
+    if (monthSummary && filterOwner && filterAnimalType && filterMonth) {
+      try {
+        const result = await api.dailyLogs.monthSummary(
+          filterOwner,
+          filterAnimalType,
+          filterMonth.format("YYYY-MM")
+        );
+
+        setMonthSummary(result);
+      } catch (error) {
+        console.error("Không thể đồng bộ tổng tháng:", error);
+      }
     }
   };
   ///
@@ -1816,7 +1856,7 @@ const Batches = () => {
           dailyLog={editingDailyLog}
           owners={owners}
           animalTypes={animalTypes}
-          onSaved={fetchDailyLogs}
+          onSaved={handleDailyLogSaved}
         />
 
         {/* =====================================================
