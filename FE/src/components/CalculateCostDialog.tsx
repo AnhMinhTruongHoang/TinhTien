@@ -73,7 +73,11 @@ const CalculateCostDialog = ({
     } catch (error) {
       console.error("Không thể tính chi phí:", error);
 
-      alert(error instanceof Error ? error.message : "Không thể tính chi phí");
+      toast.error(
+        error instanceof Error ? error.message : "Không thể tính chi phí"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,6 +86,104 @@ const CalculateCostDialog = ({
     setCostResult(null);
     onClose();
   };
+
+  ///
+  const formatMoneyInput = (value: number) => {
+    if (!value) {
+      return "";
+    }
+
+    return Number(value).toLocaleString("en-US");
+  };
+
+  const numberToVietnameseWords = (value: number) => {
+    const number = Math.floor(Number(value || 0));
+
+    if (number === 0) {
+      return "Không đồng";
+    }
+
+    const digits = [
+      "không",
+      "một",
+      "hai",
+      "ba",
+      "bốn",
+      "năm",
+      "sáu",
+      "bảy",
+      "tám",
+      "chín",
+    ];
+
+    const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
+
+    const readThreeDigits = (num: number) => {
+      const hundred = Math.floor(num / 100);
+      const ten = Math.floor((num % 100) / 10);
+      const unit = num % 10;
+
+      const parts: string[] = [];
+
+      if (hundred > 0) {
+        parts.push(digits[hundred], "trăm");
+      }
+
+      if (ten > 1) {
+        parts.push(digits[ten], "mươi");
+
+        if (unit === 1) {
+          parts.push("mốt");
+        } else if (unit === 4) {
+          parts.push("tư");
+        } else if (unit === 5) {
+          parts.push("lăm");
+        } else if (unit > 0) {
+          parts.push(digits[unit]);
+        }
+      } else if (ten === 1) {
+        parts.push("mười");
+
+        if (unit === 5) {
+          parts.push("lăm");
+        } else if (unit > 0) {
+          parts.push(digits[unit]);
+        }
+      } else if (unit > 0) {
+        if (hundred > 0) {
+          parts.push("lẻ");
+        }
+
+        parts.push(digits[unit]);
+      }
+
+      return parts.join(" ");
+    };
+
+    let remaining = number;
+    let groupIndex = 0;
+
+    const result: string[] = [];
+
+    while (remaining > 0) {
+      const group = remaining % 1000;
+
+      if (group > 0) {
+        const words = readThreeDigits(group);
+
+        result.unshift([words, units[groupIndex]].filter(Boolean).join(" "));
+      }
+
+      remaining = Math.floor(remaining / 1000);
+
+      groupIndex++;
+    }
+
+    const text = result.join(" ");
+
+    return text.charAt(0).toUpperCase() + text.slice(1) + " đồng";
+  };
+  ///
 
   return (
     <Dialog
@@ -131,15 +233,31 @@ const CalculateCostDialog = ({
         <TextField
           fullWidth
           label="Đơn giá (đ/con)"
-          type="number"
-          value={pricePerUnit}
-          onChange={(e) => setPricePerUnit(parseInt(e.target.value, 10) || 0)}
+          type="text"
+          value={formatMoneyInput(pricePerUnit)}
+          onChange={(e) => {
+            const rawValue = e.target.value.replace(/\D/g, "");
+
+            setPricePerUnit(rawValue === "" ? 0 : Number(rawValue));
+          }}
           slotProps={{
             htmlInput: {
-              min: 1,
+              inputMode: "numeric",
             },
           }}
-          sx={{ mb: 2 }}
+          helperText={
+            pricePerUnit > 0
+              ? numberToVietnameseWords(pricePerUnit)
+              : "Nhập đơn giá cho mỗi con"
+          }
+          sx={{
+            mb: 2,
+
+            "& .MuiFormHelperText-root": {
+              fontStyle: "italic",
+              fontWeight: 500,
+            },
+          }}
         />
 
         <Button

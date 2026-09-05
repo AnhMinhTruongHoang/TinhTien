@@ -21,6 +21,8 @@ import {
 } from "@mui/material";
 import { Edit, Delete, Add } from "@mui/icons-material";
 import { api } from "@/utils/api";
+import { toastConfirm } from "@/utils/toastConfirm";
+import { toast } from "react-toastify";
 
 const Owners = () => {
   const theme = useTheme();
@@ -86,12 +88,48 @@ const Owners = () => {
     setEditingId(null);
   };
 
-  const handleCall = (phone?: string) => {
-    if (!phone) return;
+  const handleCall = async (phone?: string) => {
+    if (!phone) {
+      toast.warning("Không có số điện thoại");
 
-    if (confirm(`Bạn có muốn gọi đến số ${phone} không?`)) {
-      window.location.href = `tel:${phone}`;
+      return;
     }
+
+    const confirmed = await toastConfirm({
+      title: "Gọi Điện Thoại",
+
+      message: (
+        <Box>
+          <Typography variant="body2">Bạn có muốn gọi đến số:</Typography>
+
+          <Typography
+            sx={{
+              mt: 1,
+
+              fontSize: 22,
+
+              fontWeight: 900,
+
+              color: "primary.main",
+            }}
+          >
+            {phone}
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Gọi Ngay",
+
+      cancelText: "Hủy",
+
+      confirmColor: "primary",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    window.location.href = `tel:${phone}`;
   };
 
   const handleSave = async () => {

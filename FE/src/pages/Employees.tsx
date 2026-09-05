@@ -32,6 +32,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { toast } from "react-toastify";
 
+import { toastConfirm } from "@/utils/toastConfirm";
+
 import { api } from "@/utils/api";
 
 import EmployeeFormDialog from "@/components/EmployeeFormDialog";
@@ -80,7 +82,100 @@ const Employees = () => {
   // =====================================================
 
   const formatMoney = (value: number) =>
-    `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+    `${Number(value || 0).toLocaleString("en-US")}đ`;
+
+  ///
+  const numberToVietnameseWords = (value: number) => {
+    const number = Math.floor(Number(value || 0));
+
+    if (number === 0) {
+      return "Không đồng";
+    }
+
+    const digits = [
+      "không",
+      "một",
+      "hai",
+      "ba",
+      "bốn",
+      "năm",
+      "sáu",
+      "bảy",
+      "tám",
+      "chín",
+    ];
+
+    const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
+
+    const readThreeDigits = (num: number) => {
+      const hundred = Math.floor(num / 100);
+
+      const ten = Math.floor((num % 100) / 10);
+
+      const unit = num % 10;
+
+      const parts: string[] = [];
+
+      if (hundred > 0) {
+        parts.push(digits[hundred], "trăm");
+      }
+
+      if (ten > 1) {
+        parts.push(digits[ten], "mươi");
+
+        if (unit === 1) {
+          parts.push("mốt");
+        } else if (unit === 4) {
+          parts.push("tư");
+        } else if (unit === 5) {
+          parts.push("lăm");
+        } else if (unit > 0) {
+          parts.push(digits[unit]);
+        }
+      } else if (ten === 1) {
+        parts.push("mười");
+
+        if (unit === 5) {
+          parts.push("lăm");
+        } else if (unit > 0) {
+          parts.push(digits[unit]);
+        }
+      } else if (unit > 0) {
+        if (hundred > 0) {
+          parts.push("lẻ");
+        }
+
+        parts.push(digits[unit]);
+      }
+
+      return parts.join(" ");
+    };
+
+    let remaining = number;
+
+    let groupIndex = 0;
+
+    const result: string[] = [];
+
+    while (remaining > 0) {
+      const group = remaining % 1000;
+
+      if (group > 0) {
+        const words = readThreeDigits(group);
+
+        result.unshift([words, units[groupIndex]].filter(Boolean).join(" "));
+      }
+
+      remaining = Math.floor(remaining / 1000);
+
+      groupIndex++;
+    }
+
+    const text = result.join(" ");
+
+    return text.charAt(0).toUpperCase() + text.slice(1) + " đồng";
+  };
+  ///
 
   // =====================================================
   // FETCH
@@ -160,9 +255,43 @@ const Employees = () => {
   // =====================================================
 
   const handleDelete = async (employee: Employee) => {
-    const confirmed = window.confirm(
-      `Xóa nhân viên "${employee.name}"?\n\nCác ngày nghỉ liên quan có thể vẫn còn trong lịch sử.`
-    );
+    const confirmed = await toastConfirm({
+      title: "Xóa Nhân Viên",
+
+      message: (
+        <Box>
+          <Typography variant="body2">
+            Bạn có chắc chắn muốn xóa nhân viên:
+          </Typography>
+
+          <Typography
+            sx={{
+              mt: 1,
+              fontWeight: 800,
+              color: "error.main",
+            }}
+          >
+            {employee.name}
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1.5,
+              color: "warning.main",
+              fontWeight: 600,
+            }}
+          >
+            Các ngày nghỉ liên quan có thể vẫn còn trong lịch sử.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Xóa Nhân Viên",
+      cancelText: "Hủy",
+      confirmColor: "error",
+    });
 
     if (!confirmed) {
       return;
@@ -379,7 +508,6 @@ const Employees = () => {
                       {employee.phone || "-"}
                     </Typography>
                   </Box>
-
                   <Box>
                     <Typography variant="caption" color="text.secondary">
                       Lương gốc
@@ -393,6 +521,22 @@ const Employees = () => {
                       }}
                     >
                       {formatMoney(employee.baseSalary)}
+                    </Typography>
+
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: "block",
+                        mt: 0.3,
+
+                        color: "text.secondary",
+
+                        fontStyle: "italic",
+
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {numberToVietnameseWords(employee.baseSalary)}
                     </Typography>
                   </Box>
 
@@ -520,6 +664,19 @@ const Employees = () => {
                       }}
                     >
                       {formatMoney(employee.baseSalary)}
+                    </Typography>
+
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: "block",
+                        mt: 0.3,
+                        color: "text.secondary",
+                        fontStyle: "italic",
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {numberToVietnameseWords(employee.baseSalary)}
                     </Typography>
                   </TableCell>
 

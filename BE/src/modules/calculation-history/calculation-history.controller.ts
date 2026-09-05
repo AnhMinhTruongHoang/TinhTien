@@ -48,6 +48,12 @@ export class CalculationHistoryController {
 
   @Put('month/paid')
   markMonthAsPaid(@Body() dto: MarkMonthPaidDto) {
+    console.log('===== MARK MONTH PAID =====');
+    console.log('DTO:', dto);
+    console.log('ownerId:', dto.ownerId);
+    console.log('animalTypeId:', dto.animalTypeId);
+    console.log('month:', dto.month);
+
     return this.service.markMonthAsPaid(
       dto.ownerId,
       dto.animalTypeId,

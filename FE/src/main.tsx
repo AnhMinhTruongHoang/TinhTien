@@ -1,5 +1,3 @@
-import { StrictMode } from "react";
-
 import { createRoot } from "react-dom/client";
 
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -13,6 +11,8 @@ import { ToastContainer } from "react-toastify";
 import AppThemeProvider from "./theme/AppThemeProvider";
 
 import { AuthProvider } from "./contexts/AuthContext";
+
+import { ToastConfirmHost } from "./utils/toastConfirm";
 
 import "dayjs/locale/vi";
 import "react-toastify/dist/ReactToastify.css";
@@ -31,6 +31,8 @@ createRoot(document.getElementById("root")!).render(
     >
       <AuthProvider>
         <App />
+
+        <ToastConfirmHost />
 
         <ToastContainer
           position="top-right"

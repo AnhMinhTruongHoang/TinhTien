@@ -30,6 +30,8 @@ import { api } from "../utils/api";
 
 import { toast } from "react-toastify";
 
+import { toastConfirm } from "@/utils/toastConfirm";
+
 interface BackupItem {
   filename: string;
   size: number;
@@ -144,13 +146,66 @@ const BackupManager = () => {
   // =====================================================
 
   const handleRestoreTest = async (filename: string) => {
-    const confirmed = window.confirm(
-      `Khôi phục bản sao lưu này?\n\n` +
-        `${filename}\n\n` +
-        `Dữ liệu sẽ được khôi phục vào database TEST:\n` +
-        `TinhTien_Restore_Test\n\n` +
-        `Database TinhTien hiện tại sẽ KHÔNG bị thay đổi.`
-    );
+    const confirmed = await toastConfirm({
+      title: "Khôi Phục Backup Test",
+
+      message: (
+        <Box>
+          <Typography variant="body2">
+            Bạn có muốn khôi phục bản sao lưu:
+          </Typography>
+
+          <Typography
+            sx={{
+              mt: 1,
+              fontWeight: 800,
+              color: "primary.main",
+              wordBreak: "break-all",
+            }}
+          >
+            {filename}
+          </Typography>
+
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Database khôi phục
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.3,
+                fontWeight: 800,
+              }}
+            >
+              TinhTien_Restore_Test
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1.5,
+              color: "success.main",
+              fontWeight: 700,
+            }}
+          >
+            Database TinhTien hiện tại sẽ không bị thay đổi.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Khôi Phục Test",
+      cancelText: "Hủy",
+      confirmColor: "primary",
+    });
 
     if (!confirmed) {
       return;
@@ -174,7 +229,6 @@ const BackupManager = () => {
       setRestoringFile(null);
     }
   };
-
   // =====================================================
   // RESTORE DATABASE THẬT
   // =====================================================
@@ -182,14 +236,71 @@ const BackupManager = () => {
   const handleRestoreReal = async (filename: string) => {
     // ================= CONFIRM 1 =================
 
-    const confirmed = window.confirm(
-      `CẢNH BÁO!\n\n` +
-        `Bạn đang chuẩn bị khôi phục DATABASE THẬT.\n\n` +
-        `File:\n${filename}\n\n` +
-        `Dữ liệu hiện tại sẽ bị thay thế bằng dữ liệu trong bản backup.\n\n` +
-        `Hệ thống sẽ tự tạo một bản backup an toàn trước khi khôi phục.\n\n` +
-        `Bạn có muốn tiếp tục?`
-    );
+    const confirmed = await toastConfirm({
+      title: "Cảnh Báo Khôi Phục Database",
+
+      message: (
+        <Box>
+          <Typography
+            sx={{
+              fontWeight: 800,
+              color: "error.main",
+            }}
+          >
+            Bạn đang chuẩn bị khôi phục DATABASE THẬT.
+          </Typography>
+
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              File backup
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.3,
+                fontWeight: 700,
+                wordBreak: "break-all",
+              }}
+            >
+              {filename}
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 2,
+            }}
+          >
+            Dữ liệu hiện tại sẽ bị thay thế bằng dữ liệu trong bản backup.
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1.5,
+              color: "warning.main",
+              fontWeight: 700,
+            }}
+          >
+            Hệ thống sẽ tự tạo một bản backup an toàn trước khi bắt đầu khôi
+            phục.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Tiếp Tục Khôi Phục",
+      cancelText: "Hủy",
+      confirmColor: "error",
+    });
 
     if (!confirmed) {
       return;
@@ -240,9 +351,50 @@ const BackupManager = () => {
   // =====================================================
 
   const handleDelete = async (filename: string) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa bản sao lưu này?\n\n${filename}`
-    );
+    const confirmed = await toastConfirm({
+      title: "Xóa Bản Sao Lưu",
+
+      message: (
+        <Box>
+          <Typography variant="body2">
+            Bạn có chắc chắn muốn xóa bản sao lưu này?
+          </Typography>
+
+          <Typography
+            sx={{
+              mt: 1.5,
+              p: 1.5,
+
+              borderRadius: 2,
+
+              bgcolor: "action.hover",
+
+              fontWeight: 700,
+
+              wordBreak: "break-all",
+            }}
+          >
+            {filename}
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1.5,
+              color: "error.main",
+              fontWeight: 700,
+            }}
+          >
+            File backup sau khi xóa sẽ không thể sử dụng để khôi phục dữ liệu.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Xóa Backup",
+      cancelText: "Hủy",
+      confirmColor: "error",
+    });
 
     if (!confirmed) {
       return;
@@ -259,7 +411,7 @@ const BackupManager = () => {
     } catch (error) {
       console.error("Không thể xóa backup:", error);
 
-      alert(
+      toast.error(
         error instanceof Error ? error.message : "Không thể xóa bản sao lưu"
       );
     } finally {

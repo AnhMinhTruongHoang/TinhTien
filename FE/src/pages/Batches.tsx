@@ -34,6 +34,7 @@ import {
   Share,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
+import { toastConfirm } from "@/utils/toastConfirm";
 import { api } from "@/utils/api";
 
 import CalculationHistoryDialog from "@/components/CalculationHistoryDialog";
@@ -380,7 +381,34 @@ const Batches = () => {
   // =====================================================
 
   const handleDelete = async (id: string) => {
-    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa ngày này?");
+    const confirmed = await toastConfirm({
+      title: "Xóa Nhật Ký",
+
+      message: (
+        <Box>
+          <Typography variant="body2">
+            Bạn có chắc chắn muốn xóa nhật ký ngày này?
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1.5,
+              color: "error.main",
+              fontWeight: 600,
+            }}
+          >
+            Dữ liệu sau khi xóa sẽ không thể khôi phục bằng thao tác thông
+            thường.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Xóa Nhật Ký",
+      cancelText: "Hủy",
+      confirmColor: "error",
+    });
 
     if (!confirmed) {
       return;
@@ -424,11 +452,34 @@ const Batches = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Xác nhận đã nhận ${Number(calculation.totalCost || 0).toLocaleString(
-        "vi-VN"
-      )}đ?`
-    );
+    const confirmed = await toastConfirm({
+      title: "Xác Nhận Đã Nhận Tiền",
+
+      message: (
+        <Box>
+          <Typography variant="body2">Xác nhận đã nhận số tiền:</Typography>
+
+          <Typography
+            sx={{
+              mt: 1,
+              fontSize: 22,
+              fontWeight: 900,
+              color: "success.main",
+            }}
+          >
+            {Number(calculation.totalCost || 0).toLocaleString("en-US")}đ
+          </Typography>
+
+          <Typography variant="caption" color="text.secondary">
+            Sau khi xác nhận, khoản này sẽ được đánh dấu là đã nhận tiền.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Xác Nhận",
+      cancelText: "Hủy",
+      confirmColor: "success",
+    });
 
     if (!confirmed) {
       return;
@@ -469,7 +520,6 @@ const Batches = () => {
     }
   };
   /// take month
-
   const handleMarkMonthAsPaid = async () => {
     if (!filterOwner || !filterAnimalType || !filterMonth) {
       toast.warning("Vui lòng chọn chủ, loại động vật và tháng");
@@ -478,7 +528,6 @@ const Batches = () => {
 
     if (!monthSummary || Number(monthSummary.unpaidDays || 0) <= 0) {
       toast.info("Không có ngày nào cần xác nhận thanh toán");
-
       return;
     }
 
@@ -486,10 +535,59 @@ const Batches = () => {
 
     const totalUnpaid = Number(monthSummary.totalUnpaid || 0);
 
-    const confirmed = window.confirm(
-      `Xác nhận đã nhận tiền cho ${unpaidDays} ngày chưa thanh toán?\n\n` +
-        `Tổng số tiền: ${totalUnpaid.toLocaleString("vi-VN")}đ`
-    );
+    const confirmed = await toastConfirm({
+      title: "Xác Nhận Đã Nhận Tiền",
+
+      message: (
+        <Box>
+          <Typography variant="body2">
+            Xác nhận đã nhận tiền cho <strong>{unpaidDays} ngày</strong> chưa
+            thanh toán?
+          </Typography>
+
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              Tổng số tiền
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.3,
+                fontSize: 24,
+                fontWeight: 900,
+                color: "success.main",
+              }}
+            >
+              {totalUnpaid.toLocaleString("en-US")}đ
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 1.5,
+              color: "warning.main",
+              fontWeight: 600,
+            }}
+          >
+            Tất cả các ngày chưa thanh toán trong tháng này sẽ được chuyển sang
+            trạng thái đã nhận tiền.
+          </Typography>
+        </Box>
+      ),
+
+      confirmText: "Xác Nhận Đã Nhận",
+      cancelText: "Hủy",
+      confirmColor: "success",
+    });
 
     if (!confirmed) {
       return;
@@ -500,9 +598,7 @@ const Batches = () => {
 
       const result = await api.calculationHistory.markMonthAsPaid({
         ownerId: filterOwner,
-
         animalTypeId: filterAnimalType,
-
         month: filterMonth.format("YYYY-MM"),
       });
 
@@ -510,10 +606,8 @@ const Batches = () => {
         result.message || `Đã xác nhận ${result.updatedCount} ngày`
       );
 
-      // Refresh table
       await fetchDailyLogs();
 
-      // Refresh tổng tháng
       await handleMonthSummary();
     } catch (error) {
       console.error("Không thể xác nhận thanh toán tháng:", error);

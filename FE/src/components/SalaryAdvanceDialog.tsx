@@ -68,8 +68,108 @@ const SalaryAdvanceDialog = ({
     setNote("");
   }, [open]);
 
+  ////==================================================
   const formatMoney = (value: number) =>
-    `${Number(value || 0).toLocaleString("vi-VN")}đ`;
+    `${Number(value || 0).toLocaleString("en-US")}đ`;
+
+  const formatMoneyInput = (value: number) => {
+    if (!value) {
+      return "";
+    }
+
+    return Number(value).toLocaleString("en-US");
+  };
+
+  const numberToVietnameseWords = (value: number) => {
+    const number = Math.floor(Number(value || 0));
+
+    if (number === 0) {
+      return "Không đồng";
+    }
+
+    const digits = [
+      "không",
+      "một",
+      "hai",
+      "ba",
+      "bốn",
+      "năm",
+      "sáu",
+      "bảy",
+      "tám",
+      "chín",
+    ];
+
+    const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
+
+    const readThreeDigits = (num: number) => {
+      const hundred = Math.floor(num / 100);
+
+      const ten = Math.floor((num % 100) / 10);
+
+      const unit = num % 10;
+
+      const parts: string[] = [];
+
+      if (hundred > 0) {
+        parts.push(digits[hundred], "trăm");
+      }
+
+      if (ten > 1) {
+        parts.push(digits[ten], "mươi");
+
+        if (unit === 1) {
+          parts.push("mốt");
+        } else if (unit === 4) {
+          parts.push("tư");
+        } else if (unit === 5) {
+          parts.push("lăm");
+        } else if (unit > 0) {
+          parts.push(digits[unit]);
+        }
+      } else if (ten === 1) {
+        parts.push("mười");
+
+        if (unit === 5) {
+          parts.push("lăm");
+        } else if (unit > 0) {
+          parts.push(digits[unit]);
+        }
+      } else if (unit > 0) {
+        if (hundred > 0) {
+          parts.push("lẻ");
+        }
+
+        parts.push(digits[unit]);
+      }
+
+      return parts.join(" ");
+    };
+
+    let remaining = number;
+
+    let groupIndex = 0;
+
+    const result: string[] = [];
+
+    while (remaining > 0) {
+      const group = remaining % 1000;
+
+      if (group > 0) {
+        const words = readThreeDigits(group);
+
+        result.unshift([words, units[groupIndex]].filter(Boolean).join(" "));
+      }
+
+      remaining = Math.floor(remaining / 1000);
+
+      groupIndex++;
+    }
+
+    const text = result.join(" ");
+
+    return text.charAt(0).toUpperCase() + text.slice(1) + " đồng";
+  };
 
   // =====================================================
   // PARTIAL
@@ -262,6 +362,20 @@ const SalaryAdvanceDialog = ({
           </Typography>
         </Box>
 
+        <Typography
+          variant="caption"
+          sx={{
+            display: "block",
+            mt: 0.4,
+
+            color: "text.secondary",
+
+            fontStyle: "italic",
+          }}
+        >
+          {numberToVietnameseWords(remainingSalary)}
+        </Typography>
+
         {/* DATE */}
 
         <DatePicker
@@ -287,19 +401,33 @@ const SalaryAdvanceDialog = ({
 
         <TextField
           fullWidth
-          type="number"
+          type="text"
           label="Số tiền ứng"
-          value={amount}
-          onChange={(e) => setAmount(Number(e.target.value))}
+          value={formatMoneyInput(amount)}
+          onChange={(e) => {
+            const rawValue = e.target.value.replace(/\D/g, "");
+
+            setAmount(rawValue === "" ? 0 : Number(rawValue));
+          }}
           slotProps={{
             htmlInput: {
-              min: 0,
-              max: remainingSalary,
+              inputMode: "numeric",
             },
           }}
-          helperText={`Tối đa ${formatMoney(remainingSalary)}`}
+          helperText={
+            amount > 0
+              ? `${numberToVietnameseWords(amount)} • Tối đa ${formatMoney(
+                  remainingSalary
+                )}`
+              : `Tối đa ${formatMoney(remainingSalary)}`
+          }
           sx={{
             mb: 2,
+
+            "& .MuiFormHelperText-root": {
+              fontStyle: "italic",
+              fontWeight: 500,
+            },
           }}
         />
 

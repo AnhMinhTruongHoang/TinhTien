@@ -1,8 +1,5 @@
-// update-daily-log.dto.ts
-export class UpdateDailyLogDto {
-  ownerId?: string;
-  animalTypeId?: string;
-  date?: string;
-  quantity?: number;
-  notes?: string;
-}
+import { PartialType } from '@nestjs/mapped-types';
+
+import { CreateDailyLogDto } from './create-daily-log.dto';
+
+export class UpdateDailyLogDto extends PartialType(CreateDailyLogDto) {}
