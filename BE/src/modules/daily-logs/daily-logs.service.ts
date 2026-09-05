@@ -166,13 +166,41 @@ export class DailyLogsService {
   // =====================================================
 
   async delete(id: string) {
-    const log = await this.dailyLogModel.findByIdAndDelete(id);
+    // =====================================================
+    // KIỂM TRA DAILY LOG CÓ TỒN TẠI
+    // =====================================================
+
+    const log = await this.dailyLogModel.findById(id).exec();
 
     if (!log) {
       throw new NotFoundException(`DailyLog with ID ${id} not found`);
     }
 
-    return log;
+    // =====================================================
+    // XÓA TOÀN BỘ CALCULATION HISTORY LIÊN QUAN
+    // =====================================================
+
+    const historyDeleteResult = await this.historyModel.deleteMany({
+      dailyLog: id,
+    });
+
+    // =====================================================
+    // XÓA DAILY LOG
+    // =====================================================
+
+    await this.dailyLogModel.findByIdAndDelete(id).exec();
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    return {
+      message: 'Xóa nhật ký thành công',
+
+      deletedId: id,
+
+      deletedHistories: historyDeleteResult.deletedCount,
+    };
   }
 
   // =====================================================
