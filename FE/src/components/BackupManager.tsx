@@ -323,7 +323,7 @@ const BackupManager = () => {
     try {
       setRestoringRealFile(filename);
 
-      const result = await api.backup.restore(filename, confirmation);
+      await api.backup.restore(filename, confirmation);
 
       toast.success("Khôi phục database thành công");
 

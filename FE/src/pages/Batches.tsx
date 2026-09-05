@@ -917,14 +917,16 @@ const Batches = () => {
               <Button
                 variant="contained"
                 onClick={handleMonthSummary}
-                disabled={!filterOwner || !filterAnimalType}
+                disabled={
+                  !filterOwner || !filterAnimalType || loadingMonthSummary
+                }
                 sx={{
                   minWidth: {
                     sm: 145,
                   },
                 }}
               >
-                TỔNG THÁNG
+                {loadingMonthSummary ? "ĐANG TỔNG HỢP..." : "TỔNG THÁNG"}
               </Button>
 
               <Button
@@ -954,6 +956,11 @@ const Batches = () => {
                 onClick={() => setOwnerReportOpen(true)}
               >
                 Báo Cáo Tháng
+              </Button>
+
+              {/* THÊM NÚT NÀY */}
+              <Button variant="outlined" onClick={handleResetFilter}>
+                XÓA LỌC
               </Button>
             </Box>
           </Box>
