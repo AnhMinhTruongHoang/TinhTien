@@ -71,7 +71,9 @@ const defaultFormData = {
   notes: "",
 };
 
-const quickPrices = [120000, 130000, 140000, 150000];
+const quickPrices = [
+  70000, 120000, 130000, 140000, 150000, 160000, 170000, 180000,
+];
 
 const DailyLogFormDialog = ({
   open,
