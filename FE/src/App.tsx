@@ -16,6 +16,7 @@ import Owners from "./pages/Owners";
 import AnimalTypes from "./pages/AnimalTypes";
 import Employees from "./pages/Employees";
 import Login from "./pages/Login";
+import Debts from "./pages/Debts";
 
 // =====================================================
 // LAYOUT SAU KHI ĐĂNG NHẬP
@@ -67,6 +68,8 @@ function App() {
             <Route path="/" element={<Dashboard />} />
 
             <Route path="/batches" element={<Batches />} />
+
+            <Route path="/debts" element={<Debts />} />
 
             <Route path="/employees" element={<Employees />} />
 

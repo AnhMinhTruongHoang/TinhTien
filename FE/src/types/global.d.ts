@@ -121,3 +121,102 @@ declare namespace ApiResponse {
     status: "error";
   }
 }
+
+//////////// api debts types ////////////
+declare namespace Debts {
+  export type DebtType = "DEBT" | "PAYMENT";
+
+  export interface CreateDebtDto {
+    ownerId: string;
+    type: DebtType;
+    amount: number;
+    date: string;
+    note?: string;
+  }
+
+  export interface UpdateDebtDto {
+    ownerId?: string;
+    type?: DebtType;
+    amount?: number;
+    date?: string;
+    note?: string;
+  }
+
+  export interface OwnerResponse {
+    _id: string;
+    name: string;
+    contact?: string;
+    address?: string;
+  }
+
+  export interface DebtResponse {
+    _id: string;
+    owner: string;
+    type: DebtType;
+    amount: number;
+    date: string;
+    note: string;
+    balance: number;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+
+  export interface DebtListResponse {
+    _id: string;
+    owner: OwnerResponse;
+    type: DebtType;
+    amount: number;
+    date: string;
+    note: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+
+  export interface DebtUpdateResponse extends DebtListResponse {
+    balance: number;
+  }
+
+  export interface DebtTransaction {
+    _id: string;
+    owner: string | OwnerResponse;
+    type: DebtType;
+    amount: number;
+    date: string;
+    note: string;
+    balance: number;
+    balanceAfter?: number;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+
+  export interface OwnerHistory {
+    owner: OwnerResponse;
+    totalDebt: number;
+    totalPayment: number;
+    balance: number;
+    transactions: DebtTransaction[];
+  }
+
+  interface OwnerSummary {
+    owner: OwnerResponse;
+    totalDebt: number;
+    totalPayment: number;
+    balance: number;
+    transactionCount: number;
+  }
+
+  interface Summary {
+    totalDebt: number;
+    totalPayment: number;
+    totalBalance: number;
+    totalOwners: number;
+    owners: OwnerSummary[];
+  }
+
+  export interface DeleteResponse {
+    message: string;
+    deletedId: string;
+    deletedType: DebtType;
+    deletedAmount: number;
+  }
+}

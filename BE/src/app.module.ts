@@ -18,6 +18,7 @@ import { SalaryAdvancesModule } from './modules/salary-advances/salary-advances.
 
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
+import { DebtsModule } from './modules/debts/debts.module';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
     EmployeeAbsencesModule,
     MonthlyPayrollsModule,
     SalaryAdvancesModule,
-
+    DebtsModule,
     AuthModule,
   ],
 

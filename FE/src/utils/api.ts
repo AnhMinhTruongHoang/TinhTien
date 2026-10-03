@@ -369,6 +369,38 @@ export const salaryAdvancesApi = {
     }),
 };
 
+// =====================================================
+// DEBTS / CÔNG NỢ API
+// =====================================================
+
+export const debtsApi = {
+  create: (data: Debts.CreateDebtDto) =>
+    request<Debts.DebtTransaction>("/debts", {
+      method: "POST",
+      body: data,
+    }),
+
+  getAll: () => request<Debts.DebtTransaction[]>("/debts"),
+
+  getById: (id: string) => request<Debts.DebtTransaction>(`/debts/${id}`),
+
+  getSummary: () => request<Debts.Summary>("/debts/summary"),
+
+  getByOwner: (ownerId: string) =>
+    request<Debts.OwnerHistory>(`/debts/owner/${ownerId}`),
+
+  update: (id: string, data: Debts.UpdateDebtDto) =>
+    request<Debts.DebtTransaction>(`/debts/${id}`, {
+      method: "PUT",
+      body: data,
+    }),
+
+  delete: (id: string) =>
+    request<any>(`/debts/${id}`, {
+      method: "DELETE",
+    }),
+};
+
 // ============ AUTH API ============
 
 export interface AdminUser {
@@ -396,6 +428,7 @@ export const authApi = {
       method: "POST",
     }),
 };
+
 // Cập nhật object api
 export const api = {
   dailyLogs: dailyLogsApi,
@@ -407,5 +440,6 @@ export const api = {
   employeeAbsences: employeeAbsencesApi,
   monthlyPayrolls: monthlyPayrollsApi,
   salaryAdvances: salaryAdvancesApi,
+  debts: debtsApi,
   auth: authApi,
 };

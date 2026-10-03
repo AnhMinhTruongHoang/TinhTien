@@ -26,7 +26,7 @@ import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import PetsIcon from "@mui/icons-material/Pets";
 import BadgeIcon from "@mui/icons-material/Badge";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
-import { Logout } from "@mui/icons-material";
+import { AccountBalanceWallet, Logout } from "@mui/icons-material";
 
 import { useAuth } from "../contexts/AuthContext";
 
@@ -76,6 +76,11 @@ const Navbar = () => {
       label: "Nhật Ký",
       path: "/batches",
       icon: <ChecklistIcon fontSize="small" />,
+    },
+    {
+      label: "Công Nợ",
+      path: "/debts",
+      icon: <AccountBalanceWallet fontSize="small" />,
     },
     {
       label: "Nhân Viên",
